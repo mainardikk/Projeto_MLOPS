@@ -1,17 +1,22 @@
-# Hiperparâmetros do modelo. Mudou aqui? O CI treina de novo e confere os limiares.
+# FALHA CONTROLADA: cenario 5 para E2/E4. Nao incorporar esta branch na main.
 semente: 42
-
 preprocessamento:
   log1p: true
-
 validacao:
   n_splits: 5
-  recall_selecao_minimo: 0.90
-  grade_C: [0.1, 1.0, 10.0]
-  pesos_classe_legitima: [1.0, 1.15, 1.25, 1.5]
-
+  recall_selecao_minimo: 0.9
+  grade_C:
+  - 0.1
+  - 1.0
+  - 10.0
+  pesos_classe_legitima:
+  - 1.0
+  - 1.15
+  - 1.25
+  - 1.5
 modelo:
   C: 10.0
   max_iter: 3000
-  # Penalizar mais o erro sobre mensagens legítimas protege a precisão de spam.
-  class_weight: {0: 1.5, 1: 1.0}
+  class_weight:
+    0: 1.0
+    1: 10000.0

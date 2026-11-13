@@ -1,0 +1,88 @@
+# Entrega 5: falha controlada e proteção do campeão
+
+Esta branch é um experimento negativo para as evidências **E2 e E4**. Ela parte do commit
+`704184255579918b50cd0c1b0bb435e3a92676de`, que tem CI/CT aprovados e a tag `v1.0.0` publicada.
+O PR desta branch deve ser **fechado sem merge**. A falha não deve ser corrigida nem incorporada
+à main: o objetivo é comprovar que as verificações bloqueiam uma configuração inadequada.
+
+## Alteração controlada
+
+Executamos `python demo/cenarios.py aplicar 5`. O cenário mantém o lote de demonstração de
+400 linhas já existente, com fator de drift 3 e origem na reserva, e altera somente o valor
+semântico de `modelo.class_weight` em `params.yaml`:
+
+| Classe | Peso aprovado na main | Peso nesta branch |
+|---|---:|---:|
+| Legítima (`0`) | 1,5 | 1,0 |
+| Spam (`1`) | 1,0 | 10.000,0 |
+
+Semente, pré-processamento, C, máximo de iterações, bases, lote, limiares, testes e workflows
+permanecem iguais. A ferramenta também reserializa o YAML, sem alterar os demais parâmetros.
+Não removemos testes, não flexibilizamos o contrato e não alteramos rótulos dos dados.
+
+O peso extremo torna muito caro errar um spam. O modelo passa a classificar muitas mensagens
+como spam: o recall sobe, mas mensagens legítimas viram falsos positivos. Isso contraria o
+custo do erro escolhido no projeto, que prioriza proteger comunicações legítimas.
+
+## Resultado esperado no GitHub
+
+| Verificação | Resultado esperado |
+|---|---|
+| Lint e formatação | Verde |
+| Validação dos dados e proveniência | Verde |
+| Testes de código e dados | Verdes |
+| CI: testes de modelo, Python 3.11 e 3.12 | Vermelhos, incluindo precisão abaixo do contrato |
+| CT: drift | Cinco atributos com drift; gatilho disparado |
+| CT: DVC | Preparação e treino concluídos |
+| CT: portão | Vermelho por precisão insuficiente e regressão frente ao campeão |
+| CT: confirmação do campeão e artifacts | Confirmação dos hashes e relatórios preservados |
+| Promoção e CD | Não executados para este candidato |
+
+Na execução remota, os steps após os testes de modelo são pulados pelo CI quando há falha;
+isso não indica que a API foi substituída ou que ela reprovou. A API serve o campeão
+versionado, enquanto os testes de modelo treinam com os parâmetros deste commit.
+
+## Observação local antes da publicação
+
+O CI local terminou com código 1: seis testes da camada de modelo falharam. Lint, formatação,
+validação bruta, os 20 testes de código, os 29 de dados e os 13 da API passaram.
+No treino somente sobre a base, a precisão no holdout foi **0,469930** e o recall **1,0**.
+Os demais testes de modelo também expõem os efeitos da configuração, como excesso de
+falsos positivos e desempenho inferior ao baseline.
+
+O CT local terminou com código 1 **no portão**, depois de concluir o treino com DVC.
+A avaliação usou as mesmas 1.041 linhas para candidato e campeão:
+
+| Modelo | Precisão de spam | Recall de spam | Falsos positivos | Falsos negativos |
+|---|---:|---:|---:|---:|
+| Campeão preservado | 0,934555 | 0,864407 | 25 | 56 |
+| Candidato com peso extremo | 0,468785 | 1,000000 | 468 | 0 |
+
+O candidato encontrou os 413 spams, mas marcou também 468 mensagens legítimas como spam.
+Recall perfeito não compensou a precisão de 46,88%. Duas regras reprovaram: precisão >= 0,93
+e precisão >= a do campeão no mesmo conjunto. As comparações usam os valores completos,
+sem arredondar antes da decisão.
+
+## Prova de preservação e destino do PR
+
+O hash SHA-256 do modelo campeão antes e depois da falha foi:
+
+```text
+2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9
+```
+
+Os hashes de `models/champion/metrics.json`, bases e lote também foram comparados e permaneceram
+iguais. `python -m mlops_demo.gate --verificar-campeao` confirmou a preservação. Uma tentativa
+local com `--promover` terminou com código 1 e a mensagem de promoção bloqueada por reprovação.
+
+Os candidatos e relatórios da execução remota ficam no artifact `candidato-e-relatorios`,
+incluindo `gate.json`, `gate.md`, `drift.json` e `champion_preservation.json`. O Summary deve
+mostrar a reprovação e a confirmação de que os hashes do campeão não mudaram.
+
+O `dvc.lock` gerado durante o ensaio local foi restaurado ao estado da entrega 4; não há
+promoção nem novo artefato certificado nesta branch. O runner do CT reproduz o candidato a
+partir dos parâmetros alterados. Os arquivos gerados continuam fora do Git.
+
+Após conferir as duas falhas nas etapas corretas, fechar o PR sem merge, manter a branch como
+evidência e retornar à main aprovada. Os links E2 e E4 serão consolidados no relatório da
+sexta entrega. Este experimento não cria tag e não modifica a imagem pública `1.0.0`.
