@@ -18,7 +18,8 @@ modelos no mesmo conjunto e também impede queda de precisão em relação ao ca
 Usamos somente as **2.522 linhas de treino** para comparar parâmetros, em cinco folds
 estratificados, embaralhados com semente 42. Cada previsão de validação é obtida por um modelo
 que não treinou naquela linha. O pipeline ajusta o scaler dentro de cada fold, evitando usar
-estatísticas da avaliação. A reserva de 841 linhas continua exclusiva dos futuros lotes do CT.
+estatísticas da avaliação. As 841 linhas da reserva ficaram fora da seleção inicial;
+400 delas foram posteriormente usadas no lote de demonstração do CT, com origem registrada.
 
 As frequências e os comprimentos apresentam escalas e caudas diferentes. A comparação interna
 favoreceu `log1p`, seguido de `StandardScaler` e regressão logística, por melhorar o recall.

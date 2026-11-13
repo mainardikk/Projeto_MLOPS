@@ -106,7 +106,8 @@ publicação; a visibilidade pública é uma etapa adicional.
 
 Na página do pacote, abra **Package settings > Change visibility > Public**. O GitHub
 documenta esse controle em [visibilidade de pacotes](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility).
-O pacote esperado é [projeto_mlops](https://github.com/users/mainardikk/packages/container/package/projeto_mlops).
+O [pacote publicado e público](https://github.com/mainardikk/Projeto_MLOPS/pkgs/container/projeto_mlops)
+teve [download anônimo e teste HTTP aprovados](https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43356673814).
 
 Em Actions, execute **CD** manualmente na tag `v1.0.0`, marcando `verificar_publica=true`.
 Esse modo usa um runner com configuração Docker vazia: baixa sem autenticação e testa a
@@ -119,4 +120,5 @@ docker run --rm -p 8000:8000 ghcr.io/mainardikk/projeto_mlops:1.0.0
 python demo/smoke_test.py http://localhost:8000 --aguardar 60
 ```
 
-Os links finais de E1–E5 e do pacote serão consolidados no relatório da sexta entrega.
+Os links finais de E1–E5 e do pacote estão em [ADAPTACAO.md](../ADAPTACAO.md) e
+[ENTREGA.md](../ENTREGA.md). O PR de falha foi fechado sem merge.
