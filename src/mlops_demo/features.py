@@ -1,9 +1,10 @@
 """Pré-processamento e construção do pipeline de modelo."""
 
+import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 from mlops_demo.config import ALVO, FEATURES
 
@@ -19,10 +20,17 @@ def separar_xy(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
 
 
 def construir_pipeline(params: dict) -> Pipeline:
-    """Pipeline de treino: padronização + regressão logística."""
+    """Log1p reduz a assimetria das frequências/contagens; o scaler só ajusta no treino."""
     modelo = params["modelo"]
     return Pipeline(
         [
+            (
+                "logaritmo",
+                FunctionTransformer(
+                    np.log1p if params["preprocessamento"]["log1p"] else None,
+                    feature_names_out="one-to-one",
+                ),
+            ),
             ("padronizar", StandardScaler()),
             (
                 "classificador",

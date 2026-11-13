@@ -14,12 +14,12 @@ from mlops_demo.train import treinar
 pytestmark = pytest.mark.modelo
 
 
-def test_campeao_versionado_foi_certificado_pelo_portao():
+def test_campeao_versionado_registra_o_contrato_aprovado():
     """O metrics.json do campeão registra o que o portão mediu ao aprová-lo e cumpre o contrato."""
     with open(config.METRICAS_CAMPEAO, encoding="utf-8") as arquivo:
         declaradas = json.load(arquivo)
-    assert declaradas["recall_maligno"] >= config.RECALL_MINIMO, declaradas
-    assert declaradas["precisao_maligna"] >= config.PRECISAO_MINIMA, declaradas
+    assert declaradas["recall_spam"] >= config.RECALL_MINIMO, declaradas
+    assert declaradas["precisao_spam"] >= config.PRECISAO_MINIMA, declaradas
 
 
 def test_campeao_versionado_nao_colapsou_na_base_de_referencia(campeao, base_holdout):
@@ -30,15 +30,15 @@ def test_campeao_versionado_nao_colapsou_na_base_de_referencia(campeao, base_hol
     Por isso o piso aqui é menor.
     """
     metricas = avaliar(campeao, base_holdout)
-    assert metricas["recall_maligno"] >= config.PISO_SANIDADE, metricas
-    assert metricas["precisao_maligna"] >= config.PISO_SANIDADE, metricas
+    assert metricas["recall_spam"] >= config.PISO_RECALL_SANIDADE, metricas
+    assert metricas["precisao_spam"] >= config.PISO_PRECISAO_SANIDADE, metricas
 
 
 def test_treino_com_o_codigo_e_params_atuais_cumpre_o_contrato(modelo_atual, base_holdout):
     """Se alguém mexer no código ou no params.yaml, o CI treina de novo e confere os limiares."""
     metricas = avaliar(modelo_atual, base_holdout)
-    assert metricas["recall_maligno"] >= config.RECALL_MINIMO, metricas
-    assert metricas["precisao_maligna"] >= config.PRECISAO_MINIMA, metricas
+    assert metricas["recall_spam"] >= config.RECALL_MINIMO, metricas
+    assert metricas["precisao_spam"] >= config.PRECISAO_MINIMA, metricas
 
 
 def test_modelo_supera_o_baseline_ingenuo(modelo_atual, base_treino, base_holdout):
@@ -81,13 +81,21 @@ def test_invariancia_a_ruido_minimo(modelo_atual, xy_holdout):
     assert mudou <= 0.02
 
 
-def test_direcional_tumor_maior_nao_reduz_a_chance_de_maligno(modelo_atual, xy_holdout):
-    """Teste direcional: tumor maior não pode reduzir a probabilidade média de câncer."""
-    X_te, _ = xy_holdout
-    coluna = list(modelo_atual.classes_).index(config.CLASSE_MALIGNA)
+def test_direcional_indicios_promocionais_aumentam_probabilidade_media_de_spam(
+    modelo_atual, base_treino
+):
+    """Hipótese de domínio: mais free, money, $ e ! elevam a suspeita média de spam."""
+    X_te = base_treino[config.FEATURES].iloc[:200]
+    coluna = list(modelo_atual.classes_).index(config.CLASSE_SPAM)
     maior = X_te.copy()
-    for c in config.COLUNAS_TAMANHO:
-        maior[c] = maior[c] * 1.10
+    for c in config.COLUNAS_INDICIOS_SPAM:
+        maior[c] = (maior[c] * 1.10 + 0.05).clip(upper=100)
     antes = modelo_atual.predict_proba(X_te)[:, coluna].mean()
     depois = modelo_atual.predict_proba(maior)[:, coluna].mean()
     assert depois >= antes
+
+
+def test_no_maximo_cinco_por_cento_das_mensagens_legitimas_viram_spam(modelo_atual, base_holdout):
+    legitimas = base_holdout.loc[base_holdout[config.ALVO] == 0, config.FEATURES]
+    taxa_falsos_positivos = (modelo_atual.predict(legitimas) == config.CLASSE_SPAM).mean()
+    assert taxa_falsos_positivos <= 0.05

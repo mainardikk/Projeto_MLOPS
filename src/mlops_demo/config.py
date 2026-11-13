@@ -3,7 +3,8 @@
 from pathlib import Path
 
 import yaml
-from sklearn.datasets import load_breast_cancer
+
+from mlops_demo.spambase import ALVO_SPAMBASE, FEATURES_SPAMBASE, PASTA_SPAMBASE
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -13,6 +14,7 @@ DADOS_LOTES = DADOS_BRUTOS / "lotes"
 DADOS_PROCESSADOS = RAIZ / "data" / "processed"
 BASE_TREINO = DADOS_BRUTOS / "base_treino.csv"
 BASE_HOLDOUT = DADOS_BRUTOS / "base_holdout.csv"
+BASE_RESERVA = PASTA_SPAMBASE / "preparado" / "base_reserva.csv"
 TREINO_PROCESSADO = DADOS_PROCESSADOS / "treino.csv"
 AVALIACAO_PROCESSADA = DADOS_PROCESSADOS / "avaliacao.csv"
 
@@ -27,19 +29,25 @@ RELATORIO_DRIFT = RAIZ / "reports" / "drift.md"
 PARAMS = RAIZ / "params.yaml"
 
 # esquema dos dados
-FEATURES = [str(nome) for nome in load_breast_cancer().feature_names]  # str puro, não numpy.str_
-ALVO = "target"
-# ATENÇÃO: no Breast Cancer do scikit-learn, 0 = MALIGNO e 1 = BENIGNO.
-CLASSE_MALIGNA = 0
-COLUNAS_TAMANHO = [c for c in FEATURES if any(p in c for p in ("radius", "perimeter", "area"))]
+FEATURES = FEATURES_SPAMBASE.copy()
+ALVO = ALVO_SPAMBASE
+CLASSE_SPAM = 1
+COLUNAS_INDICIOS_SPAM = [
+    "word_freq_free",
+    "word_freq_money",
+    "char_freq_dollar",
+    "char_freq_exclamation",
+]
+COLUNAS_DRIFT = [*COLUNAS_INDICIOS_SPAM, "word_freq_you", "word_freq_your"]
 
 # limiares de qualidade (o "contrato" do modelo). Mudar aqui exige revisão em PR.
-RECALL_MINIMO = 0.90
-PRECISAO_MINIMA = 0.90
-TOLERANCIA_CAMPEAO = 0.0  # o candidato não pode ter recall menor que o campeão
-PISO_SANIDADE = 0.80  # o campeão não pode colapsar na base de referência (holdout fixo)
+RECALL_MINIMO = 0.85
+PRECISAO_MINIMA = 0.93
+TOLERANCIA_CAMPEAO = 0.0  # a precisão do candidato não pode cair em relação ao campeão
+PISO_RECALL_SANIDADE = 0.80
+PISO_PRECISAO_SANIDADE = 0.90
 LIMITE_DRIFT_P = 0.01  # p-valor do teste KS
-MIN_FEATURES_DRIFT = 3  # gatilho do CT: quantos atributos com drift disparam o retreino
+MIN_FEATURES_DRIFT = 4  # gatilho entre os 57 atributos; quatro alterações disparam o CT
 
 
 def carregar_params() -> dict:

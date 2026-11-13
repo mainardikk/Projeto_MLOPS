@@ -1,7 +1,8 @@
 # Spambase: preparação reproduzível
 
-Os dados desta pasta estão preparados para a adaptação do projeto. Neste commit eles ainda não
-alimentam o modelo nem a API: os dados ativos continuam em `data/raw/`.
+Os dados desta pasta são a fonte reproduzível do pipeline de spam. Desde o commit 3,
+`preparado/base_treino.csv` e `preparado/base_holdout.csv` estão copiados, byte a byte, para
+`data/raw/`, alimentando o modelo e a API. A reserva permanece separada para os lotes do CT.
 
 ## Fonte e atribuição
 
@@ -85,7 +86,7 @@ Usamos `train_test_split` em duas etapas, com estratificação pelo alvo e **sem
 60% para treino; os 40% restantes são divididos igualmente entre holdout e reserva.
 O arredondamento resulta nas quantidades abaixo.
 
-| Conjunto | Linhas | Legítimas (`0`) | Spam (`1`) | Uso futuro |
+| Conjunto | Linhas | Legítimas (`0`) | Spam (`1`) | Uso |
 |---|---:|---:|---:|---|
 | Treino | 2.522 | 1.517 | 1.005 | Ajustar o modelo; validação interna para decisões |
 | Holdout | 841 | 505 | 336 | Avaliação fixa; fora do treino e da seleção de parâmetros |
@@ -109,7 +110,10 @@ python -m mlops_demo.spambase preparar
 # Conferir a fonte e recalcular tudo em memória; não modifica arquivos nem usa rede.
 python -m mlops_demo.spambase verificar
 
-# Executar também os testes do projeto original e os novos testes de preparação.
+# Ativar novamente os mesmos CSVs em data/raw/ (não troca a divisão).
+python -m mlops_demo.data base
+
+# Executar os testes do pipeline de spam e da preparação reproduzível.
 python demo/local.py ci
 ```
 

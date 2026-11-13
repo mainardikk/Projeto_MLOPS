@@ -28,7 +28,11 @@ print("health ok | versão:", saude["versao_codigo"])
 
 with open(HOLDOUT, encoding="utf-8") as arquivo:
     linha = next(csv.DictReader(arquivo))
-linha.pop("target")
-predicao = chamar("/predict", {"atributos": [float(v) for v in linha.values()]})
-assert predicao["classe"] in {"maligno", "benigno"}, predicao
+esquema = chamar("/schema")
+assert esquema["quantidade_atributos"] == 57, esquema
+assert esquema["alvo"] == "spam" and esquema["classe_positiva"] == 1, esquema
+atributos = [float(linha[nome]) for nome in esquema["atributos"]]
+predicao = chamar("/predict", {"atributos": atributos})
+assert predicao["classe"] in {"spam", "legitimo"}, predicao
+assert 0 <= predicao["probabilidade_spam"] <= 1, predicao
 print("predict ok |", predicao)

@@ -1,299 +1,155 @@
-# Projeto de demonstração: CI/CD/CT para ML
+# Filtro de spam com CI/CD/CT
 
-Projeto pequeno, mas completo, que mostra como um modelo de machine learning é testado, retreinado e entregue de forma
-automática. Usa ferramentas reais: **GitHub Actions**, **pytest**, **ruff**, **DVC**, **FastAPI**, **Docker** e
-**GitHub Container Registry**.
+Adaptação do [projeto de Wesley Sobreira](https://github.com/wesleyasantos/ci_cd_ct_mlops)
+para classificação binária de mensagens usando o **Spambase**. O modelo recebe **57 atributos
+numéricos**, classifica a mensagem como `spam` ou `legitimo` e publica uma API FastAPI.
+O repositório da equipe foi criado sem fork e sem o histórico Git do projeto original.
 
-O modelo é uma regressão logística que classifica tumores de mama (dataset Breast Cancer do scikit-learn).
-A classe de interesse é a **maligna** (rótulo `0`), então medimos **recall** e **precisão** dela.
+**Etapa atual: commit 3 de 6.** O Spambase está ativo, o campeão inicial foi gerado e os testes
+existentes foram adaptados. Os roteiros de cenários de `demo/cenarios.py`, o reforço dos pipelines
+e as evidências de drift/falhas/publicação serão concluídos nas próximas entregas.
 
-## Adaptação em andamento: Spambase (commit 2 de 6)
+## Problema, dados e contrato
 
-O novo dataset está preparado em [`data/spambase/`](data/spambase/README.md), com fonte, licença
-CC BY 4.0, análise de duplicatas, partições estratificadas e hashes SHA-256. Nesta etapa, o modelo,
-a API e os CSVs ativos em `data/raw/` ainda são os da base original descrita abaixo.
+O uso proposto é encaminhar mensagens suspeitas para uma pasta de spam. A classe positiva é
+**spam (`1`)**; `0` representa mensagem legítima. O erro mais caro é o **falso positivo**, quando
+uma mensagem legítima é marcada como spam. Por isso a métrica principal é a precisão de spam.
 
-Com o ambiente virtual ativo, confira os dados novos sem internet:
+| Regra do portão | Limite |
+|---|---:|
+| Precisão de spam do candidato | >= 0,93 |
+| Recall de spam do candidato | >= 0,85 |
+| Precisão do candidato no mesmo conjunto do campeão | >= precisão do campeão |
 
-```bash
-python -m mlops_demo.spambase verificar
-python demo/local.py ci
-```
+O recall mínimo impede um filtro que identifica apenas poucos spams para obter alta precisão.
+O teste de sanidade do campeão no holdout histórico exige precisão >= 0,90 e recall >= 0,80;
+ele complementa o contrato medido na certificação. Há também um teste de falsos positivos
+entre mensagens legítimas, com limite de 5% para o modelo treinado pelo CI.
 
-O CI também verifica a preparação do Spambase, sem baixar dados durante os testes. A ativação do
-novo domínio e a substituição do campeão ficam para o commit 3.
+O Spambase foi publicado por Mark Hopkins, Erik Reeber, George Forman e Jaap Suermondt (1999),
+na [UCI](https://archive.ics.uci.edu/dataset/94/spambase), sob
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+DOI: [10.24432/C53G6X](https://doi.org/10.24432/C53G6X).
 
-## O que cada letra faz neste projeto
+Das 4.601 linhas originais, removemos seis pertencentes a grupos com rótulos conflitantes e
+391 repetições. A divisão estratificada com semente 42 contém:
 
-| Letra | Workflow | Quando dispara | O que faz |
-|---|---|---|---|
-| **CI** | `.github/workflows/ci.yml` | push na `main` e todo Pull Request | lint, testes de código, dados, modelo e API |
-| **CT** | `.github/workflows/ct.yml` | agenda semanal e execução manual (sempre retreinam); lote novo ou `params.yaml` alterado (retreinam só se houver drift) | detecta drift, retreina com DVC, aplica o portão de qualidade e propõe o novo campeão em um PR (ou, no modo automático, publica direto e cria a tag) |
-| **CD** | `.github/workflows/cd.yml` | tag `v*.*.*` (criada por uma pessoa ou pelo CT no modo automático) | roda o CI, constrói a imagem Docker, faz o teste de fumaça e publica no `ghcr.io` |
+| Conjunto | Linhas | Função |
+|---|---:|---|
+| Treino | 2.522 | Ajustar o modelo e fazer validação interna |
+| Holdout | 841 | Avaliação fixa e regressão do CI |
+| Reserva | 841 | Origem dos lotes do CT |
 
-## Estrutura
+Não há sobreposição de atributos entre os conjuntos. Fonte, licença, esquema, limpeza e hashes
+estão em [data/spambase/README.md](data/spambase/README.md).
 
-```
-projeto_ci_cd_ct/
-  .github/workflows/     ci.yml, ct.yml, cd.yml
-  src/mlops_demo/        config, data, features, evaluate, train, gate, monitor, api
-  tests/                 test_codigo, test_dados, test_modelo, test_api
-  data/raw/              base_treino.csv, base_holdout.csv e lotes/ (lotes novos chegam aqui)
-  models/champion/       o modelo em produção (versionado no Git)
-  params.yaml            hiperparâmetros (mudou aqui? o CI treina de novo e confere os limiares)
-  dvc.yaml               pipeline: preparar e treinar
-  Dockerfile             imagem da API com o modelo campeão
-  demo/                  cenários de prática, gerador de lotes, teste de fumaça e execução local
-```
+## Modelo e resultado inicial
 
-## Contrato de qualidade
+O pipeline usa **log1p + StandardScaler + regressão logística**. O logaritmo reduz a assimetria
+das frequências e contagens. Os hiperparâmetros e a grade de seleção estão em `params.yaml`.
+Cada fold de validação ajusta seu próprio scaler, usando somente o treino daquele fold.
 
-Definido em `src/mlops_demo/config.py`:
+| Medida | Validação interna, 5 folds | Holdout, 841 linhas |
+|---|---:|---:|
+| Precisão de spam | 94,28% | 94,70% |
+| Recall de spam | 90,15% | 85,12% |
+| Acurácia | 93,89% | 92,15% |
 
-- recall da classe maligna **>= 0,90**
-- precisão da classe maligna **>= 0,90** (sem ela, um modelo que chuta tudo como maligno teria recall 1,0)
-- o candidato não pode ter recall menor que o do campeão, medido **no mesmo conjunto**
+No holdout ocorreram 16 falsos positivos e 50 falsos negativos. O recall ficou próximo do
+limite. Uma primeira configuração foi reprovada, e o critério de seleção foi revisto depois
+dessa consulta ao holdout. Esse histórico e a limitação da avaliação estão registrados em
+[docs/VALIDACAO.md](docs/VALIDACAO.md); não apresentamos o holdout como um teste final intocado.
 
----
+## O que cada pipeline faz
 
-# Passo a passo
+| Pipeline | Arquivo | Gatilho e responsabilidade |
+|---|---|---|
+| CI | `.github/workflows/ci.yml` | Push na main e PRs; lint e testes em Python 3.11 e 3.12 |
+| CT | `.github/workflows/ct.yml` | Novos lotes ou params alterados verificam drift; agenda/manual sempre retreinam; DVC gera candidato e o portão decide |
+| CD | `.github/workflows/cd.yml` | Tag `v*.*.*`; executa CI, constrói Docker, testa a API e publica no GHCR |
 
-São três partes. A **Parte 1** roda tudo na sua máquina. A **Parte 2** leva o projeto para o seu GitHub. A **Parte 3**
-é a prática com cinco cenários.
+O monitor compara os 57 atributos por KS, com p < 0,01. O gatilho atual exige pelo menos quatro
+atributos com drift. A simulação modifica seis frequências promocionais e mantém valores de
+0 a 100. Mudança de distribuição não prova perda de qualidade; o portão avalia o candidato.
 
-## Parte 1. Rodar na sua máquina (sem GitHub)
+Em PRs, o CT avalia sem promover. Em execuções na main, o modo padrão propõe o campeão por PR.
+A variável `PROMOCAO_AUTOMATICA=false` mantém revisão humana; `true` permite publicar e criar
+uma tag automaticamente. Mesmo no modo com revisão, abrir o PR pode criar um commit do bot;
+essa operação será controlada antes das evidências, respeitando o limite de seis commits.
 
-Pré-requisitos: Python 3.10 ou superior e Git. Docker é opcional.
+## Executar localmente no PowerShell
 
-**1. Crie e ative o ambiente virtual.**
+Use Python 3.11, também usado no Docker e no CI. O projeto mantém o pacote `mlops_demo`.
 
-```bash
-python -m venv .venv
-source .venv/Scripts/activate        # Git Bash no Windows
-# PowerShell:  .venv\Scripts\Activate.ps1
-# Linux e macOS: source .venv/bin/activate
-```
-
-**2. Instale o projeto.**
-
-```bash
+```powershell
+# Criar o ambiente, caso ainda não exista.
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -e ".[dev,ct]"
-```
 
-**3. Rode o CI inteiro.** Deve terminar com todos os passos `[ok]`.
-
-```bash
+# Código, dados, modelo e contrato da API.
 python demo/local.py ci
-```
 
-**4. Rode o CT inteiro** (drift, retreino com DVC e portão de qualidade, sem abrir PR).
-
-```bash
+# Drift, preparação/treino com DVC e portão, sem promover nem publicar.
 python demo/local.py ct
 ```
 
-**5. Suba a API e teste.**
+No CT local, `demo/local.py` sempre executa o retreino, mesmo sem drift. No workflow do GitHub,
+eventos de push/PR sem drift não retreinam. Mantenha o ambiente ativo: os comandos do `dvc repro`
+usam o `python` disponível no PATH. O `dvc.lock` é versionado; candidatos e relatórios são locais.
 
-```bash
-uvicorn mlops_demo.api:app --reload
-# em outro terminal, com o ambiente ativo:
+Para conferir a origem e reproduzir as bases sem baixar novamente:
+
+```powershell
+python -m mlops_demo.spambase verificar
+python -m mlops_demo.data base
+python -m mlops_demo.data validar
+```
+
+Para reproduzir a seleção interna e a criação inicial do campeão:
+
+```powershell
+python -m mlops_demo.train --selecionar
+python -m mlops_demo.train --validar
+python -m mlops_demo.train --campeao
+```
+
+`--selecionar` apenas informa o resultado: não edita `params.yaml`. `--campeao` é destinado à
+criação inicial; promoções posteriores devem passar pelo CT e pela revisão prevista no fluxo.
+A reserva fica fora do treino inicial e não depende de download durante os testes.
+
+## API e teste de fumaça
+
+```powershell
+uvicorn mlops_demo.api:app --host 127.0.0.1 --port 8000
+# Em outro terminal, na raiz do projeto:
 python demo/smoke_test.py http://localhost:8000
 ```
 
-**6. (Opcional) Construa a imagem Docker.**
+- `GET /health`: saúde, versão do código e métricas do campeão.
+- `GET /schema`: nomes e ordem dos 57 atributos, alvo e rótulos.
+- `POST /predict`: JSON com `atributos`, uma lista de exatamente 57 números.
+- `GET /docs`: documentação interativa e esquema de entrada.
 
-```bash
-docker build -t mlops-demo .
-docker run -p 8000:8000 mlops-demo
-```
+A resposta de `/predict` contém `classe` (`spam` ou `legitimo`), `probabilidade_spam` (classe 1)
+e `versao_codigo`. A API valida frequências percentuais, sequências de maiúsculas, números
+finitos e tamanho da lista. Textos, booleanos e campos extras são rejeitados com HTTP 422.
+Não envie texto de emails: esta API espera os atributos numéricos já extraídos.
 
-> O `dvc repro` usa o `python` do PATH. Se o ambiente virtual não estiver ativo, ele falha com
-> `No module named 'mlops_demo'`.
+## Docker e GitHub
 
-## Parte 2. Colocar o projeto no seu GitHub
-
-**1. Crie o repositório.** No GitHub, crie um repositório **público** e **vazio** (sem README). Repositório público
-tem Actions gratuito.
-
-**2. Configure o Git somente nesta pasta** (sem `--global`) e envie o projeto.
-
-```bash
-git init
-git config --local user.name  "Seu Nome"
-git config --local user.email "seu-email@exemplo.com"
-git config --local core.autocrlf false
-git add -A
-git remote add origin https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
-git commit -m "projeto inicial"
-git push -u origin main
-```
-
-**3. Confirme o primeiro CI.** Abra a aba **Actions**. O CI roda sozinho e deve ficar verde nos três jobs
-(`Lint e formatação (ruff)`, `Testes (Python 3.11)` e `Testes (Python 3.12)`).
-
-**4. Libere o CT para abrir Pull Requests.** Em **Settings > Actions > General > Workflow permissions**:
-
-- selecione **Read and write permissions**
-- marque **Allow GitHub Actions to create and approve pull requests**
-- clique em **Save**
-
-Sem isso o CT cria a branch `ct/novo-campeao`, mas não abre o PR, e o resumo do run avisa o motivo.
-
-**5. Escolha como o CT promove um modelo novo.** É uma variável do repositório, e o melhor momento de criá-la é agora.
-Em **Settings > Secrets and variables > Actions**, abra a aba **Variables** (não a de Secrets), clique em
-**New repository variable** e use o nome `PROMOCAO_AUTOMATICA` com um destes valores:
-
-| Valor | Modo | O que o CT faz quando o portão aprova |
-|---|---|---|
-| `false` (recomendado para seguir o passo a passo) | com revisão | abre um Pull Request e uma pessoa decide |
-| `true` | automático | publica na `main`, cria a tag da versão e dispara o CD, sem ninguém |
-
-Dá para trocar o valor depois, em **Edit** (ícone de lápis) na lista de variáveis. Se você não criar a variável, vale o modo
-com revisão, como se fosse `false`. **Com `true`, não faça o passo 6**: o CT precisa gravar direto na `main`.
-
-**6. (Opcional) Proteja a `main`.** Em **Settings > Branches** (ou **Rulesets**), crie uma regra para `main`:
-
-- marque **Require a pull request before merging**
-- marque **Require status checks to pass before merging** e adicione os três checks do item 3
-  (eles só aparecem na busca depois do primeiro CI)
-
-Com a regra ativa, um CI vermelho bloqueia o merge. Essa regra é incompatível com o modo automático.
-
-## Parte 3. Prática com cinco cenários
-
-Cada cenário muda uma coisa no projeto. **Antes de rodar, tente prever** o que vai falhar e em qual etapa.
-
-O roteiro é o mesmo para todos. Troque `N` pelo número do cenário.
-
-```bash
-git switch main && git pull
-git switch -c cenario-N
-python demo/cenarios.py aplicar N
-git add -A
-git commit -m "cenario N"
-git push -u origin cenario-N
-```
-
-Abra o Pull Request no GitHub e acompanhe a aba **Checks**. Ao terminar, feche o PR **sem fazer merge** e volte:
-
-```bash
-git switch main
-git branch -D cenario-N
-```
-
-| N | O que muda | O que você deve observar |
-|---|---|---|
-| 1 | remove a última coluna das entradas do modelo | CI vermelho em **Testes de código** |
-| 2 | nulos e áreas negativas na base de treino | CI vermelho em **Validar os dados brutos** (antes do treino) |
-| 3 | regularização muito forte (`C: 0.00005`) | CI vermelho em **Testes de modelo**: recall abaixo de 0,90 |
-| 4 | lote novo com drift (tamanhos 25% menores) | CI verde. Veja o CT na seção seguinte |
-| 5 | `class_weight` extremo na classe maligna | CI vermelho: recall 1,0, mas precisão abaixo de 0,90 |
-
-Para listar os cenários: `python demo/cenarios.py listar`.
-
-### Cenário 4: o treinamento contínuo
-
-O lote novo mostra que os dados mudaram. Aqui o CI fica verde, porque os dados são válidos. Quem reage é o **CT**.
-
-1. No PR do cenário 4, abra o workflow **CT** e o **Summary** do run. Veja o relatório de drift e a tabela do portão
-   (campeão x candidato).
-2. Faça o merge desse PR na `main`. O CT roda de novo e, se o portão aprovar, abre um PR chamado
-   **"ct: novo modelo campeão aprovado no portão de qualidade"**.
-3. O CI desse PR aparece como **Action required**, porque o PR foi aberto pelo `GITHUB_TOKEN`. Abra o PR e clique em
-   **Approve and run workflows**.
-4. Revise o PR (só `models/champion/` muda) e faça o merge. O CT propõe, uma pessoa decide.
-
-### Cenário 4, modo automático: do lote novo à imagem publicada, sem ninguém
-
-No modo anterior, uma pessoa aprova o PR e outra cria a tag. Quando o portão de qualidade já é a regra de negócio
-("só entra modelo com recall e precisão de pelo menos 0,90 e que não piore o campeão"), dá para automatizar tudo. O CT
-passa a publicar o campeão na `main`, criar a tag da nova versão e disparar o CD.
-
-**Antes de começar (uma vez):**
-
-1. **Deixe a `main` sem proteção.** O CT precisa gravar direto na `main`. Em **Settings > Branches**, se houver uma regra para
-   `main` com **Require a pull request before merging**, apague a regra (ou desmarque essa opção). Em **Settings > Rules > Rulesets**,
-   desative ou apague o ruleset que exija Pull Request. Para conferir: na página do repositório, a `main` não deve mostrar
-   "Protected" em Settings > Branches.
-2. **Confirme as permissões do Actions.** Em **Settings > Actions > General > Workflow permissions**, deixe
-   **Read and write permissions** (passo 4 da Parte 2).
-3. **Ligue o modo.** Em **Settings > Secrets and variables > Actions > Variables**, edite a variável `PROMOCAO_AUTOMATICA`
-   (criada no passo 5 da Parte 2) e troque o valor para `true`. Se você ainda não a criou, crie agora com o valor `true`.
-
-**Executando:**
-
-1. Na `main`, atualizada, aplique o cenário 4 e envie o lote:
-
-   ```bash
-   git switch main && git pull
-   python demo/cenarios.py aplicar 4
-   git add -A && git commit -m "lote novo com drift" && git push origin main
-   ```
-
-   Se o `lote_01.csv` já existir de uma tentativa anterior, apague-o antes e faça o commit da remoção.
-2. Abra a aba **Actions** e acompanhe, em cerca de 5 minutos:
-   - **CT**: detecta o drift, retreina, o portão aprova, o robô cria o commit **"ct: promove novo modelo campeão (portão aprovado)"**
-     na `main` e cria a tag da nova versão (a primeira é `v1.0.0`). No **Summary** do run aparece a tag criada.
-   - **CD**, iniciado pelo CT sobre a nova tag: roda o CI, constrói a imagem, faz o teste de fumaça e publica.
-3. Em **Packages** (página inicial do repositório) está a imagem, com a tag da versão e `latest`. Para baixá-la sem login,
-   mude a visibilidade do pacote para **Public** (veja a seção seguinte).
-
-**O que não acontece, de propósito:**
-
-- Se o portão reprovar (cenário 5), o CT falha, nada é publicado e o modelo anterior continua em produção.
-- Se o campeão não mudar (por exemplo, a execução agendada sem dados novos), o CT não cria versão nova.
-- A cada novo campeão a versão sobe um nível (`v1.0.0`, `v1.1.0`, `v1.2.0`...).
-
-Para voltar ao modo com revisão humana, troque o valor da variável `PROMOCAO_AUTOMATICA` para `false` (ou apague-a). Se quiser
-reaplicar a proteção da `main` (passo 6 da Parte 2), faça isso agora.
-
-### Entrega (CD): tag e imagem
-
-No modo automático acima o CT cria a tag sozinho. No modo com revisão, com a `main` verde, crie uma tag de versão:
-
-```bash
-git switch main && git pull
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-O workflow **CD** roda o CI, constrói a imagem, faz o teste de fumaça e só então publica no `ghcr.io`. Depois, em
-**Packages**, abra o pacote e mude a visibilidade para **Public** (Package settings > Change visibility). Então:
-
-```bash
-docker run -p 8000:8000 ghcr.io/SEU_USUARIO/NOME_DO_REPOSITORIO:1.0.0
+```powershell
+docker build -t projeto-mlops:local .
+docker run --rm -p 8000:8000 projeto-mlops:local
 python demo/smoke_test.py http://localhost:8000
 ```
 
-## Comandos úteis
+Para o CT propor um campeão, configure no GitHub **Settings > Actions > General** as permissões
+**Read and write** e **Allow GitHub Actions to create and approve pull requests**. Em
+**Settings > Secrets and variables > Actions > Variables**, use `PROMOCAO_AUTOMATICA=false`.
+Nenhum token deve ser adicionado aos arquivos do projeto; o workflow usa o `GITHUB_TOKEN`.
 
-| Comando | Para que serve |
-|---|---|
-| `python -m mlops_demo.data validar` | valida o esquema e os valores de todos os CSVs de `data/raw/` |
-| `python -m mlops_demo.monitor` | compara os lotes novos com a base (teste KS) e diz se o gatilho dispara |
-| `dvc repro` | roda `preparar` e `treinar`, refazendo só o que mudou |
-| `python -m mlops_demo.gate` | compara candidato e campeão. Sai com código 1 se reprovar |
-| `python -m mlops_demo.gate --promover` | copia o candidato para `models/champion/` |
-| `python demo/cenarios.py listar` | lista os cenários de prática |
-| `python demo/gerar_lote.py lote_02 --drift 0.75` | gera um lote novo de exames |
-
-## Se algo der errado
-
-| Sintoma | Causa provável | Solução |
-|---|---|---|
-| Jobs falham em 2 segundos, sem passos | conta do GitHub com problema de cobrança | corrija em Settings > Billing e reexecute |
-| CT passa, mas não há PR | permissão do passo 4 da Parte 2 desligada | ligue a permissão e rode o CT de novo (Actions > CT > Run workflow) |
-| CI do PR do campeão em "Action required" | PR aberto pelo `GITHUB_TOKEN` | clique em **Approve and run workflows** |
-| Modo automático: o step "Publicar o novo campeão na main" falha ao enviar o commit para a `main` | a `main` exige Pull Request | desligue a proteção (veja "Antes de começar" do modo automático) |
-| Modo automático ligado, mas o CT abriu um PR | variável com outro nome ou com valor diferente de `true`, ou execução fora da `main` | confira o nome `PROMOCAO_AUTOMATICA`, o valor `true` e a aba Variables |
-| `dvc repro` falha com "No module named" | ambiente virtual inativo | ative o ambiente e rode de novo |
-| `dvc repro` falha com "is git-ignored" | `dvc.lock` no `.gitignore` | não ignore o `dvc.lock` |
-| Cenário não aplica ("trecho não encontrado") | a mudança já foi aplicada nesta branch | volte à `main` e crie outra branch |
-| Sem internet | rede | use `python demo/local.py ci` e `python demo/local.py ct` |
-
-## Observações
-
-- Os dados são pequenos e ficam no Git. Em um projeto real, use `dvc add` com um *remote* (S3, GCS, Azure ou outro).
-- O modelo é simples de propósito, para o treino levar poucos segundos.
-- O `GITHUB_TOKEN` padrão é suficiente aqui. Em produção, o PR de promoção costuma usar um *GitHub App* ou um token
-  dedicado, para o CI rodar sozinho nele.
+O teste Docker e a primeira publicação com tag serão registrados na etapa de CD. Após publicar,
+o pacote deverá ficar público e ser validado com o teste de fumaça sobre a imagem baixada.
+As cinco URLs de evidências e a declaração de contribuição/uso de IA entrarão no `ADAPTACAO.md`
+na entrega final. A aprovação do CI inicial e o histórico anterior continuam disponíveis no Git.

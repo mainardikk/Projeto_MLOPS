@@ -18,13 +18,13 @@ def test_health_responde_ok():
 
 
 def test_predict_devolve_o_formato_combinado(base_holdout):
-    exame = base_holdout[config.FEATURES].iloc[0].tolist()
-    resposta = cliente.post("/predict", json={"atributos": exame})
+    atributos = base_holdout[config.FEATURES].iloc[0].tolist()
+    resposta = cliente.post("/predict", json={"atributos": atributos})
     assert resposta.status_code == 200
     corpo = resposta.json()
-    assert set(corpo) == {"classe", "probabilidade_maligno", "versao_codigo"}
-    assert corpo["classe"] in {"maligno", "benigno"}
-    assert 0.0 <= corpo["probabilidade_maligno"] <= 1.0
+    assert set(corpo) == {"classe", "probabilidade_spam", "versao_codigo"}
+    assert corpo["classe"] in {"spam", "legitimo"}
+    assert 0.0 <= corpo["probabilidade_spam"] <= 1.0
 
 
 def test_predict_rejeita_quantidade_errada_de_atributos():
@@ -32,13 +32,47 @@ def test_predict_rejeita_quantidade_errada_de_atributos():
     assert resposta.status_code == 422
 
 
-def test_predict_acerta_um_caso_maligno_e_um_benigno_claros(base_holdout, campeao):
+def test_predict_devolve_spam_e_legitimo_nos_casos_de_maior_confianca(base_holdout, campeao):
     """Escolhe os casos mais claros (maior confiança do campeão) de cada classe."""
     X = base_holdout[config.FEATURES]
-    coluna = list(campeao.classes_).index(config.CLASSE_MALIGNA)
-    p_maligno = campeao.predict_proba(X)[:, coluna]
-    i_maligno = int(p_maligno.argmax())
-    i_benigno = int(p_maligno.argmin())
-    for indice, esperado in ((i_maligno, "maligno"), (i_benigno, "benigno")):
+    coluna = list(campeao.classes_).index(config.CLASSE_SPAM)
+    p_spam = campeao.predict_proba(X)[:, coluna]
+    i_spam = int(p_spam.argmax())
+    i_legitimo = int(p_spam.argmin())
+    for indice, esperado in ((i_spam, "spam"), (i_legitimo, "legitimo")):
         resposta = cliente.post("/predict", json={"atributos": X.iloc[indice].tolist()})
         assert resposta.json()["classe"] == esperado
+
+
+def test_schema_publica_a_ordem_dos_57_atributos():
+    resposta = cliente.get("/schema")
+    assert resposta.status_code == 200
+    assert resposta.json()["atributos"] == config.FEATURES
+    assert resposta.json()["quantidade_atributos"] == 57
+    assert resposta.json()["classe_positiva"] == 1
+
+
+@pytest.mark.parametrize(
+    ("coluna", "valor"),
+    [
+        ("word_freq_free", 101),
+        ("char_freq_dollar", -1),
+        ("capital_run_length_longest", 2.5),
+        ("word_freq_money", "1.0"),
+        ("word_freq_money", True),
+    ],
+)
+def test_predict_rejeita_atributos_invalidos_do_dominio(base_treino, coluna, valor):
+    atributos = base_treino[config.FEATURES].iloc[0].tolist()
+    atributos[config.FEATURES.index(coluna)] = valor
+    resposta = cliente.post("/predict", json={"atributos": atributos})
+    assert resposta.status_code == 422
+
+
+def test_probabilidade_publicada_corresponde_ao_rotulo_spam_1(base_treino, campeao):
+    X = base_treino[config.FEATURES].iloc[[0]]
+    resposta = cliente.post("/predict", json={"atributos": X.iloc[0].tolist()})
+    coluna = list(campeao.classes_).index(1)
+    esperado = float(campeao.predict_proba(X)[0, coluna])
+    assert resposta.status_code == 200
+    assert resposta.json()["probabilidade_spam"] == pytest.approx(esperado, abs=0.00005)

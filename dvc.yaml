@@ -4,6 +4,8 @@ stages:
     cmd: python -m mlops_demo.data preparar
     deps:
       - src/mlops_demo/data.py
+      - src/mlops_demo/config.py
+      - src/mlops_demo/spambase.py
       - data/raw
     outs:
       - data/processed
@@ -14,10 +16,12 @@ stages:
       - src/mlops_demo/train.py
       - src/mlops_demo/features.py
       - src/mlops_demo/evaluate.py
+      - src/mlops_demo/config.py
       - data/processed
     params:
       - semente
       - modelo
+      - preprocessamento
     outs:
       - models/candidate
     metrics:

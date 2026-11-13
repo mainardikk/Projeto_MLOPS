@@ -1,7 +1,57 @@
 {
-  "recall_maligno": 0.972972972972973,
-  "precisao_maligna": 0.9473684210526315,
-  "acuracia": 0.97,
-  "n_amostras": 100,
-  "origem": "treinamento contínuo (CT)"
+  "precisao_spam": 0.9470198675496688,
+  "recall_spam": 0.8511904761904762,
+  "acuracia": 0.9215219976218787,
+  "n_amostras": 841,
+  "verdadeiros_negativos": 489,
+  "falsos_positivos": 16,
+  "falsos_negativos": 50,
+  "verdadeiros_positivos": 286,
+  "origem": "base_treino.csv",
+  "dataset": "Spambase",
+  "classe_positiva": 1,
+  "validacao_interna": {
+    "precisao_spam": 0.9427679500520292,
+    "recall_spam": 0.9014925373134328,
+    "acuracia": 0.9389373513084853,
+    "n_amostras": 2522,
+    "verdadeiros_negativos": 1462,
+    "falsos_positivos": 55,
+    "falsos_negativos": 99,
+    "verdadeiros_positivos": 906,
+    "metodo": "predições fora do fold em validação cruzada estratificada",
+    "n_splits": 5,
+    "semente": 42
+  },
+  "params": {
+    "semente": 42,
+    "preprocessamento": {
+      "log1p": true
+    },
+    "validacao": {
+      "n_splits": 5,
+      "recall_selecao_minimo": 0.9,
+      "grade_C": [
+        0.1,
+        1.0,
+        10.0
+      ],
+      "pesos_classe_legitima": [
+        1.0,
+        1.15,
+        1.25,
+        1.5
+      ]
+    },
+    "modelo": {
+      "C": 10.0,
+      "max_iter": 3000,
+      "class_weight": {
+        "0": 1.5,
+        "1": 1.0
+      }
+    }
+  },
+  "sha256_treino": "c79510e1e2e393727dee06326dc736b48e018a399df1b90422c7df9093ef20eb",
+  "sha256_holdout": "be166300ce7c57c7a3dc802f2e0d2b75d0e57ae37fe09b20b603826f8aa404df"
 }
