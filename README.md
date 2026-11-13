@@ -7,6 +7,22 @@ automática. Usa ferramentas reais: **GitHub Actions**, **pytest**, **ruff**, **
 O modelo é uma regressão logística que classifica tumores de mama (dataset Breast Cancer do scikit-learn).
 A classe de interesse é a **maligna** (rótulo `0`), então medimos **recall** e **precisão** dela.
 
+## Adaptação em andamento: Spambase (commit 2 de 6)
+
+O novo dataset está preparado em [`data/spambase/`](data/spambase/README.md), com fonte, licença
+CC BY 4.0, análise de duplicatas, partições estratificadas e hashes SHA-256. Nesta etapa, o modelo,
+a API e os CSVs ativos em `data/raw/` ainda são os da base original descrita abaixo.
+
+Com o ambiente virtual ativo, confira os dados novos sem internet:
+
+```bash
+python -m mlops_demo.spambase verificar
+python demo/local.py ci
+```
+
+O CI também verifica a preparação do Spambase, sem baixar dados durante os testes. A ativação do
+novo domínio e a substituição do campeão ficam para o commit 3.
+
 ## O que cada letra faz neste projeto
 
 | Letra | Workflow | Quando dispara | O que faz |

@@ -1,0 +1,86 @@
+{
+  "analise_duplicatas": {
+    "duplicatas_atributos_excedentes": 394,
+    "duplicatas_completas_excedentes": 391,
+    "grupos_com_rotulos_conflitantes": 3,
+    "linhas_conflitantes_excluidas": 6,
+    "linhas_duplicadas_excluidas_apos_conflitos": 391,
+    "linhas_limpas": 4204,
+    "linhas_originais": 4601
+  },
+  "ano": 1999,
+  "atributos_numericos": 57,
+  "autores": [
+    "Mark Hopkins",
+    "Erik Reeber",
+    "George Forman",
+    "Jaap Suermondt"
+  ],
+  "classe_positiva": 1,
+  "classes_originais": {
+    "0": 2788,
+    "1": 1813
+  },
+  "dataset": "Spambase",
+  "divisao": "60/20/20, estratificada por spam, em duas etapas train_test_split",
+  "doi": "https://doi.org/10.24432/C53G6X",
+  "download": "https://archive.ics.uci.edu/static/public/94/spambase.zip",
+  "fonte": "https://archive.ics.uci.edu/dataset/94/spambase",
+  "licenca": {
+    "nome": "CC BY 4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  "nomes_normalizados": {
+    "char_freq_!": "char_freq_exclamation",
+    "char_freq_#": "char_freq_hash",
+    "char_freq_$": "char_freq_dollar",
+    "char_freq_(": "char_freq_parenthesis",
+    "char_freq_;": "char_freq_semicolon",
+    "char_freq_[": "char_freq_bracket"
+  },
+  "particoes": {
+    "holdout": {
+      "arquivo": "base_holdout.csv",
+      "classes": {
+        "0": 505,
+        "1": 336
+      },
+      "linhas": 841,
+      "proporcao_spam": 0.399524,
+      "sha256": "be166300ce7c57c7a3dc802f2e0d2b75d0e57ae37fe09b20b603826f8aa404df"
+    },
+    "reserva": {
+      "arquivo": "base_reserva.csv",
+      "classes": {
+        "0": 506,
+        "1": 335
+      },
+      "linhas": 841,
+      "proporcao_spam": 0.398335,
+      "sha256": "42fac309802ff3885ea64d14d1fe65c95f568c11fcd5839bcb13ab7133129faa"
+    },
+    "treino": {
+      "arquivo": "base_treino.csv",
+      "classes": {
+        "0": 1517,
+        "1": 1005
+      },
+      "linhas": 2522,
+      "proporcao_spam": 0.398493,
+      "sha256": "c79510e1e2e393727dee06326dc736b48e018a399df1b90422c7df9093ef20eb"
+    }
+  },
+  "semente": 42,
+  "sha256_originais": {
+    "spambase.data": "b1ef93de71f97714d3d7d4f58fc9f718da7bbc8ac8a150eff2778616a8097b12",
+    "spambase.names": "df418fab7923f929237b81efa0987ddfaf2d68cf61291243625aadc684d5ab6a"
+  },
+  "sobreposicoes_entre_particoes": 0,
+  "transformacoes": [
+    "Normalizar os nomes dos seis atributos char_freq, sem mudar sua ordem.",
+    "Excluir todos os registros de grupos de atributos com rótulos conflitantes.",
+    "Manter a primeira ocorrência dos demais atributos duplicados.",
+    "Converter contagens de maiúsculas e alvo para inteiros; sem imputação ou escala."
+  ],
+  "valores_nulos_originais": 0
+}
