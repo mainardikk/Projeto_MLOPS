@@ -8,6 +8,8 @@ name: CT
 #   - padrão (variável ausente ou diferente de "true"): abre um Pull Request e uma pessoa aprova;
 #   - automático (PROMOCAO_AUTOMATICA = "true", só na main): publica o campeão na main, cria a tag
 #     da nova versão e dispara o CD. Nenhuma pessoa entra no caminho: o portão é a decisão.
+# As promoções só são habilitadas por inputs.promover=true (manual, na main) ou pela variável
+# PERMITIR_PROMOCAO=true. Por padrão o CT apenas avalia e guarda o candidato, sem criar commits.
 on:
   schedule:
     - cron: "0 6 * * 1" # toda segunda-feira, 06h UTC (03h em Brasília)
@@ -16,11 +18,24 @@ on:
     paths:
       - "data/raw/lotes/**"
       - "params.yaml"
+      - "src/mlops_demo/**"
+      - "dvc.yaml"
+      - "dvc.lock"
+      - ".github/workflows/ct.yml"
   pull_request:
     paths:
       - "data/raw/lotes/**"
       - "params.yaml"
+      - "src/mlops_demo/**"
+      - "dvc.yaml"
+      - "dvc.lock"
+      - ".github/workflows/ct.yml"
   workflow_dispatch:
+    inputs:
+      promover:
+        description: "Permitir promoção na main (pode criar um commit adicional)"
+        type: boolean
+        default: false
 
 concurrency:
   group: ct-${{ github.ref }}
@@ -41,6 +56,7 @@ jobs:
     env:
       # "true" só se a variável do repositório estiver ligada e a execução for na main
       PROMOCAO_AUTOMATICA: ${{ vars.PROMOCAO_AUTOMATICA == 'true' && github.ref == 'refs/heads/main' }}
+      PROMOCAO_PERMITIDA: ${{ github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && inputs.promover) || vars.PERMITIR_PROMOCAO == 'true') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,10 +64,15 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            constraints.txt
 
       - name: Instalar o projeto com DVC
-        run: pip install -e ".[ct]"
+        run: pip install -c constraints.txt -e ".[ct]"
+
+      - name: Validar dados e proveniência dos lotes
+        run: python -m mlops_demo.data validar
 
       - name: Detectar drift (gatilho por evento)
         id: drift
@@ -88,6 +109,16 @@ jobs:
         run: |
           if [ -f reports/gate.md ]; then cat reports/gate.md >> "$GITHUB_STEP_SUMMARY"; fi
 
+      - name: Confirmar campeão preservado durante a avaliação
+        if: always() && steps.portao.outcome != 'skipped' && steps.decisao.outputs.executar == 'true'
+        run: |
+          python -m mlops_demo.gate --verificar-campeao
+          echo 'Campeão preservado: SHA-256 do modelo e das métricas não mudou.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Registrar modo de avaliação sem promoção
+        if: success() && steps.decisao.outputs.executar == 'true' && env.PROMOCAO_PERMITIDA != 'true'
+        run: echo 'Candidato aprovado e guardado como artifact. Promoção desativada nesta execução; nenhum commit adicional será criado.' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Guardar o candidato e os relatórios
         if: always() && steps.decisao.outputs.executar == 'true'
         uses: actions/upload-artifact@v4
@@ -99,11 +130,11 @@ jobs:
           if-no-files-found: ignore
 
       - name: Promover o candidato (copia para models/champion)
-        if: success() && steps.decisao.outputs.executar == 'true' && github.event_name != 'pull_request'
+        if: success() && steps.decisao.outputs.executar == 'true' && env.PROMOCAO_PERMITIDA == 'true'
         run: python -m mlops_demo.gate --promover
 
       - name: Abrir Pull Request com o novo campeão
-        if: success() && steps.decisao.outputs.executar == 'true' && github.event_name != 'pull_request' && env.PROMOCAO_AUTOMATICA != 'true'
+        if: success() && steps.decisao.outputs.executar == 'true' && env.PROMOCAO_PERMITIDA == 'true' && env.PROMOCAO_AUTOMATICA != 'true'
         # Exige em Settings > Actions > General: "Allow GitHub Actions to create pull requests".
         # Um humano revisa e aprova a promoção: o CT propõe, o CD só publica o que foi aprovado.
         id: pr
@@ -119,7 +150,7 @@ jobs:
 
       - name: Publicar o novo campeão na main (promoção automática)
         id: publicar
-        if: success() && steps.decisao.outputs.executar == 'true' && github.event_name != 'pull_request' && env.PROMOCAO_AUTOMATICA == 'true'
+        if: success() && steps.decisao.outputs.executar == 'true' && env.PROMOCAO_PERMITIDA == 'true' && env.PROMOCAO_AUTOMATICA == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

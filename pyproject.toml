@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mlops-demo"
-version = "0.1.0"
-description = "Projeto de demonstração de CI/CD/CT para ML"
-requires-python = ">=3.10"
+version = "1.0.0"
+description = "Classificacao de spam com Spambase e pipelines CI/CD/CT"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26",
     "pandas>=2.1",

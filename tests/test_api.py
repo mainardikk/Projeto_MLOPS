@@ -76,3 +76,16 @@ def test_probabilidade_publicada_corresponde_ao_rotulo_spam_1(base_treino, campe
     esperado = float(campeao.predict_proba(X)[0, coluna])
     assert resposta.status_code == 200
     assert resposta.json()["probabilidade_spam"] == pytest.approx(esperado, abs=0.00005)
+
+
+def test_predict_rejeita_rotulo_fornecido_pelo_cliente(base_treino):
+    atributos = base_treino[config.FEATURES].iloc[0].tolist()
+    resposta = cliente.post("/predict", json={"atributos": atributos, "spam": 1})
+    assert resposta.status_code == 422
+
+
+def test_predict_rejeita_sequencia_maior_que_total_de_maiusculas(base_treino):
+    atributos = base_treino[config.FEATURES].iloc[0].tolist()
+    atributos[config.FEATURES.index("capital_run_length_longest")] = 100
+    atributos[config.FEATURES.index("capital_run_length_total")] = 1
+    assert cliente.post("/predict", json={"atributos": atributos}).status_code == 422

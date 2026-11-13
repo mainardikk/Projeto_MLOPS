@@ -3,12 +3,16 @@
 import json
 
 import numpy as np
+import pandas as pd
 import pytest
 from sklearn.dummy import DummyClassifier
 
 from mlops_demo import config
+from mlops_demo.data import carregar_lotes_validados, preparar_particoes
 from mlops_demo.evaluate import avaliar, calcular_metricas
 from mlops_demo.features import separar_xy
+from mlops_demo.gate import decidir
+from mlops_demo.monitor import detectar_drift, deve_retreinar
 from mlops_demo.train import treinar
 
 pytestmark = pytest.mark.modelo
@@ -99,3 +103,14 @@ def test_no_maximo_cinco_por_cento_das_mensagens_legitimas_viram_spam(modelo_atu
     legitimas = base_holdout.loc[base_holdout[config.ALVO] == 0, config.FEATURES]
     taxa_falsos_positivos = (modelo_atual.predict(legitimas) == config.CLASSE_SPAM).mean()
     assert taxa_falsos_positivos <= 0.05
+
+
+def test_lote_promocional_dispara_drift_e_retreino_cumpre_portao(base_treino, campeao, params):
+    lotes, _ = carregar_lotes_validados()
+    assert lotes, "O lote de demonstração faz parte desta entrega."
+    novo = pd.concat(lotes, ignore_index=True)
+    assert deve_retreinar(int(detectar_drift(base_treino, novo)["drift"].sum()))
+    treino, avaliacao = preparar_particoes(lotes)
+    candidato = treinar(treino, params)
+    resultado = decidir(avaliar(candidato, avaliacao), avaliar(campeao, avaliacao))
+    assert resultado["aprovado"], resultado

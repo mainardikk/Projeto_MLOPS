@@ -8,8 +8,9 @@ WORKDIR /app
 
 # 1) dependências e código (camada que muda menos)
 COPY pyproject.toml ./
+COPY constraints.txt ./
 COPY src ./src
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir -c constraints.txt .
 
 # 2) artefato do modelo campeão (camada que muda a cada promoção)
 COPY models/champion ./models/champion

@@ -1,10 +1,19 @@
 """Testes de dados: esquema, valores e vazamento entre treino e teste."""
 
+import json
+import shutil
+
 import pandas as pd
 import pytest
 
 from mlops_demo import config
-from mlops_demo.data import listar_lotes, validar_dataframe
+from mlops_demo.data import (
+    carregar_lotes_validados,
+    gerar_lote,
+    listar_lotes,
+    preparar_particoes,
+    validar_dataframe,
+)
 from mlops_demo.spambase import PASTA_SPAMBASE
 
 pytestmark = pytest.mark.dados
@@ -62,3 +71,38 @@ def test_reserva_do_ct_nao_aparece_no_treino_nem_no_holdout(base_treino, base_ho
     chaves = set(map(tuple, reserva[config.FEATURES].to_numpy()))
     for base in (base_treino, base_holdout):
         assert chaves.isdisjoint(set(map(tuple, base[config.FEATURES].to_numpy())))
+
+
+def test_lotes_com_drifts_diferentes_nao_reutilizam_a_mesma_origem(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DADOS_LOTES", tmp_path)
+    gerar_lote("primeiro", n=100, fator_drift=3.0, semente=1)
+    gerar_lote("segundo", n=100, fator_drift=1.5, semente=2)
+    a = json.loads((tmp_path / "primeiro.json").read_text(encoding="utf-8"))
+    b = json.loads((tmp_path / "segundo.json").read_text(encoding="utf-8"))
+    assert set(a["indices_reserva"]).isdisjoint(b["indices_reserva"])
+    tabelas, usados = carregar_lotes_validados()
+    assert len(usados) == 200
+    treino, avaliacao = preparar_particoes(tabelas)
+    assert len(treino) == 2522 + 100
+    assert len(avaliacao) == 841 + 100
+    assert set(map(tuple, treino[config.FEATURES].to_numpy())).isdisjoint(
+        set(map(tuple, avaliacao[config.FEATURES].to_numpy()))
+    )
+
+
+def test_lote_duplicado_com_outro_nome_e_bloqueado(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DADOS_LOTES", tmp_path)
+    gerar_lote("original", n=100, fator_drift=3.0, semente=1)
+    for extensao in ("csv", "json"):
+        shutil.copyfile(tmp_path / f"original.{extensao}", tmp_path / f"repetido.{extensao}")
+    with pytest.raises(ValueError, match="reutilizadas"):
+        carregar_lotes_validados()
+
+
+def test_alteracao_de_lote_publicado_e_detectada_pelo_hash(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DADOS_LOTES", tmp_path)
+    gerar_lote("original", n=100, fator_drift=3.0, semente=1)
+    caminho = tmp_path / "original.csv"
+    caminho.write_bytes(caminho.read_bytes() + b"\n")
+    with pytest.raises(ValueError, match="hash"):
+        carregar_lotes_validados()

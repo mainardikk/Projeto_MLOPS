@@ -26,6 +26,8 @@ METRICAS_CANDIDATO = RAIZ / "reports" / "candidate_metrics.json"
 RELATORIO_GATE = RAIZ / "reports" / "gate.json"
 RESUMO_GATE = RAIZ / "reports" / "gate.md"
 RELATORIO_DRIFT = RAIZ / "reports" / "drift.md"
+RELATORIO_DRIFT_JSON = RAIZ / "reports" / "drift.json"
+RELATORIO_PRESERVACAO = RAIZ / "reports" / "champion_preservation.json"
 PARAMS = RAIZ / "params.yaml"
 
 # esquema dos dados

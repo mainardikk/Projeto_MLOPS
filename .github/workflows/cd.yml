@@ -1,16 +1,21 @@
 name: CD
 
-# Entrega Contínua: ao criar uma tag de versão (v1.0.0), roda o CI, constrói a imagem Docker
-# com o modelo campeão, faz um teste de fumaça no container e publica no GitHub Container Registry.
-# A tag pode ser criada por uma pessoa ou pelo CT, no modo de promoção automática (o CT dispara este
-# workflow manualmente sobre a nova tag, porque eventos criados pelo GITHUB_TOKEN não disparam outros).
 on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      verificar_publica:
+        description: "Somente baixar anonimamente a imagem da tag e testar (após tornar o pacote Public)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+concurrency:
+  group: cd-${{ github.ref }}-${{ inputs.verificar_publica || false }}
+  cancel-in-progress: false
 
 jobs:
   ci:
@@ -19,50 +24,54 @@ jobs:
 
   publicar:
     name: Construir, testar e publicar a imagem
+    if: inputs.verificar_publica != true
     needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # necessário para publicar no ghcr.io
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Conferir que o modelo campeão está no repositório
-        run: test -f models/champion/model.joblib
+      - name: Conferir tag e campeão
+        id: nome
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test -f models/champion/model.joblib
+          echo "imagem=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Metadados da imagem (nome e tags)
+      - name: Metadados da imagem
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ steps.nome.outputs.imagem }}
           tags: |
             type=semver,pattern={{version}}
             type=sha
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Filtro de spam Spambase com CI/CD/CT
 
-      - name: Construir a imagem (somente local, para o teste)
+      - name: Construir a imagem que será testada e publicada
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
-          tags: mlops-demo:teste
+          tags: |
+            mlops-demo:teste
+            ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Teste de fumaça do container
         run: |
           docker run -d --name api -p 8000:8000 mlops-demo:teste
-          for i in $(seq 1 30); do
-            curl -fs http://localhost:8000/health && break
-            sleep 1
-          done
-          python3 demo/smoke_test.py http://localhost:8000
-
-      - name: Logs do container (se algo falhou)
-        if: failure()
-        run: docker logs api
+          python3 demo/smoke_test.py http://localhost:8000 --aguardar 60
 
       - name: Login no GitHub Container Registry
         uses: docker/login-action@v3
@@ -71,11 +80,64 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publicar a imagem
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
+      - name: Publicar exatamente a imagem testada
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then docker push "$tag"; fi
+          done <<< "$IMAGE_TAGS"
+
+      - name: Baixar do GHCR e repetir o teste de fumaça
+        env:
+          IMAGEM: ${{ steps.nome.outputs.imagem }}
+        run: |
+          docker rm -f api
+          referencia="$IMAGEM:${GITHUB_REF_NAME#v}"
+          testado=$(docker image inspect --format='{{.Id}}' mlops-demo:teste)
+          docker pull "$referencia"
+          baixado=$(docker image inspect --format='{{.Id}}' "$referencia")
+          test "$testado" = "$baixado"
+          docker run -d --name api-publicada -p 8000:8000 "$referencia"
+          python3 demo/smoke_test.py http://localhost:8000 --aguardar 60
+          {
+            echo '## Imagem publicada e testada após download'
+            echo "Imagem: \`$referencia\`"
+            echo "Commit: \`$GITHUB_SHA\`"
+            docker image inspect --format='Digest: {{index .RepoDigests 0}}' "$referencia"
+            pacote="${GITHUB_REPOSITORY,,}"
+            echo "Pacote: https://github.com/users/$GITHUB_REPOSITORY_OWNER/packages/container/package/${pacote#*/}"
+            echo 'Após a primeira publicação, altere a visibilidade do pacote para Public e execute CD nesta tag com verificar_publica=true.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logs e limpeza dos containers
+        if: always()
+        run: |
+          docker logs api 2>/dev/null || true
+          docker logs api-publicada 2>/dev/null || true
+          docker rm -f api api-publicada 2>/dev/null || true
+
+  verificar-publica:
+    name: Baixar imagem sem autenticação e testar
+    if: github.event_name == 'workflow_dispatch' && inputs.verificar_publica == true
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull anônimo e teste de fumaça
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          export DOCKER_CONFIG="$(mktemp -d)"
+          imagem="ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME#v}"
+          docker pull "$imagem"
+          docker run -d --name api-publica -p 8000:8000 "$imagem"
+          python3 demo/smoke_test.py http://localhost:8000 --aguardar 60
+          echo "Download sem credenciais e teste HTTP aprovados: $imagem" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logs e limpeza do container público
+        if: always()
+        run: |
+          docker logs api-publica 2>/dev/null || true
+          docker rm -f api-publica 2>/dev/null || true

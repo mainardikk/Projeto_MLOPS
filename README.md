@@ -5,9 +5,10 @@ para classificação binária de mensagens usando o **Spambase**. O modelo receb
 numéricos**, classifica a mensagem como `spam` ou `legitimo` e publica uma API FastAPI.
 O repositório da equipe foi criado sem fork e sem o histórico Git do projeto original.
 
-**Etapa atual: commit 3 de 6.** O Spambase está ativo, o campeão inicial foi gerado e os testes
-existentes foram adaptados. Os roteiros de cenários de `demo/cenarios.py`, o reforço dos pipelines
-e as evidências de drift/falhas/publicação serão concluídos nas próximas entregas.
+**Etapa atual: commit 4 de 6.** Spambase ativo, 75 testes locais, cinco cenários adaptados e
+lote de demonstração com proveniência. CI, CT e CD têm controles de qualidade e teste de
+fumaça; os links das execuções e a entrega final serão consolidados em `ADAPTACAO.md`.
+O roteiro de operação está em [docs/OPERACAO.md](docs/OPERACAO.md).
 
 ## Problema, dados e contrato
 
@@ -64,7 +65,7 @@ dessa consulta ao holdout. Esse histórico e a limitação da avaliação estão
 
 | Pipeline | Arquivo | Gatilho e responsabilidade |
 |---|---|---|
-| CI | `.github/workflows/ci.yml` | Push na main e PRs; lint e testes em Python 3.11 e 3.12 |
+| CI | `.github/workflows/ci.yml` | Push na main e PRs; lint, testes em Python 3.11/3.12 e Docker no job 3.11 |
 | CT | `.github/workflows/ct.yml` | Novos lotes ou params alterados verificam drift; agenda/manual sempre retreinam; DVC gera candidato e o portão decide |
 | CD | `.github/workflows/cd.yml` | Tag `v*.*.*`; executa CI, constrói Docker, testa a API e publica no GHCR |
 
@@ -72,10 +73,11 @@ O monitor compara os 57 atributos por KS, com p < 0,01. O gatilho atual exige pe
 atributos com drift. A simulação modifica seis frequências promocionais e mantém valores de
 0 a 100. Mudança de distribuição não prova perda de qualidade; o portão avalia o candidato.
 
-Em PRs, o CT avalia sem promover. Em execuções na main, o modo padrão propõe o campeão por PR.
-A variável `PROMOCAO_AUTOMATICA=false` mantém revisão humana; `true` permite publicar e criar
-uma tag automaticamente. Mesmo no modo com revisão, abrir o PR pode criar um commit do bot;
-essa operação será controlada antes das evidências, respeitando o limite de seis commits.
+O CT **avalia sem promover por padrão**, tanto em PRs quanto na main. Uma promoção na main
+requer execução manual com `promover=true` ou a variável `PERMITIR_PROMOCAO=true`. Só então
+`PROMOCAO_AUTOMATICA=false` propõe o campeão por PR, ou `true` publica e cria uma tag.
+Durante as seis entregas, mantenha `PERMITIR_PROMOCAO` ausente/false e `promover=false`.
+O candidato aprovado fica nos artifacts; o campeão versionado continua sendo o inicial.
 
 ## Executar localmente no PowerShell
 
@@ -85,7 +87,7 @@ Use Python 3.11, também usado no Docker e no CI. O projeto mantém o pacote `ml
 # Criar o ambiente, caso ainda não exista.
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e ".[dev,ct]"
+pip install -c constraints.txt -e ".[dev,ct]"
 
 # Código, dados, modelo e contrato da API.
 python demo/local.py ci
@@ -117,6 +119,9 @@ python -m mlops_demo.train --campeao
 `--selecionar` apenas informa o resultado: não edita `params.yaml`. `--campeao` é destinado à
 criação inicial; promoções posteriores devem passar pelo CT e pela revisão prevista no fluxo.
 A reserva fica fora do treino inicial e não depende de download durante os testes.
+O lote de demonstração utiliza 400 linhas da reserva: 200 para treino e 200 para avaliação.
+O JSON ao lado do CSV registra índices de origem, fator e hashes. Outros lotes usam somente
+linhas ainda disponíveis. O pipeline rejeita origem repetida, conteúdo alterado e vazamento.
 
 ## API e teste de fumaça
 
@@ -151,5 +156,9 @@ Nenhum token deve ser adicionado aos arquivos do projeto; o workflow usa o `GITH
 
 O teste Docker e a primeira publicação com tag serão registrados na etapa de CD. Após publicar,
 o pacote deverá ficar público e ser validado com o teste de fumaça sobre a imagem baixada.
+Para testar a imagem pública sem credenciais, execute o CD manualmente na tag `v1.0.0` com
+`verificar_publica=true`, após alterar a visibilidade do pacote para Public. Esse modo somente
+baixa e testa a imagem, sem republicá-la nem criar commits.
+
 As cinco URLs de evidências e a declaração de contribuição/uso de IA entrarão no `ADAPTACAO.md`
 na entrega final. A aprovação do CI inicial e o histórico anterior continuam disponíveis no Git.

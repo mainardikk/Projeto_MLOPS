@@ -26,7 +26,7 @@ jobs:
           python-version: "3.11"
 
       - name: Instalar ruff
-        run: pip install ruff
+        run: pip install -c constraints.txt ruff
 
       - name: Lint
         run: ruff check .
@@ -48,10 +48,12 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            constraints.txt
 
       - name: Instalar o projeto e as ferramentas de teste
-        run: pip install -e ".[dev]"
+        run: pip install -c constraints.txt -e ".[dev]"
 
       - name: Validar os dados brutos
         run: python -m mlops_demo.data validar
@@ -67,6 +69,19 @@ jobs:
 
       - name: Testes de contrato da API
         run: pytest -m api --junitxml=reports/junit-api.xml
+
+      - name: Construir e testar Docker (Python 3.11)
+        if: matrix.python == '3.11' && github.workflow == 'CI'
+        run: |
+          docker build -t mlops-demo:ci .
+          docker run -d --name api-ci -p 8000:8000 mlops-demo:ci
+          python demo/smoke_test.py http://localhost:8000 --aguardar 60
+
+      - name: Logs e limpeza do container de CI
+        if: always() && matrix.python == '3.11' && github.workflow == 'CI'
+        run: |
+          docker logs api-ci 2>/dev/null || true
+          docker rm -f api-ci 2>/dev/null || true
 
       - name: Guardar relatórios de teste
         if: always()

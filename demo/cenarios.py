@@ -11,18 +11,25 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "src"))
 
-from mlops_demo.data import gerar_lote  # noqa: E402
+from mlops_demo import config  # noqa: E402
+from mlops_demo.data import carregar_lotes_validados, gerar_lote  # noqa: E402
+
+NOME_LOTE_DEMO = "lote_demo_spam"
+N_LOTE_DEMO = 400
+FATOR_DRIFT_DEMO = 3.0
+SEMENTE_LOTE_DEMO = 1
 
 DESCRICAO = {
     1: "Bug no pré-processamento: remove a última coluna. Esperado: CI falha em test_codigo.",
-    2: "Dados corrompidos na base de treino. Esperado: CI falha em test_dados.",
+    2: "Nulos em word_freq_free e char_freq_dollar negativo. CI falha na validação dos dados.",
     3: "Hiperparâmetro ruim (C muito pequeno). Esperado: CI falha em test_modelo (recall).",
     4: "Lote novo com drift. Esperado: CI verde e CT dispara, retreina e o portão aprova.",
-    5: "class_weight extremo. Esperado: recall 1,0, precisão baixa, CI e portão do CT reprovam.",
+    5: "Peso extremo para spam + lote com drift: CI falha em modelo e CT reprova no portão.",
 }
 
 
@@ -45,23 +52,42 @@ def cenario_1() -> None:
 def cenario_2() -> None:
     caminho = RAIZ / "data" / "raw" / "base_treino.csv"
     df = pd.read_csv(caminho)
-    df.loc[0:4, "mean radius"] = None
-    df.loc[5:7, "mean area"] = -10.0
-    df.to_csv(caminho, index=False)
-    print("alterado: data/raw/base_treino.csv (5 nulos em mean radius, 3 áreas negativas)")
+    df.loc[0:4, "word_freq_free"] = None
+    df.loc[5:7, "char_freq_dollar"] = -10.0
+    df.to_csv(caminho, index=False, float_format="%.10g", lineterminator="\n")
+    print("alterado: base_treino.csv (5 nulos em word_freq_free; char_freq_dollar negativo)")
+
+
+def _alterar_modelo(chave: str, valor) -> None:
+    caminho = RAIZ / "params.yaml"
+    params = yaml.safe_load(caminho.read_text(encoding="utf-8"))
+    params["modelo"][chave] = valor
+    caminho.write_text(
+        yaml.safe_dump(params, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def cenario_3() -> None:
-    _substituir(RAIZ / "params.yaml", "C: 1.0", "C: 0.00005")
+    _alterar_modelo("C", 0.0000001)
 
 
 def cenario_4() -> None:
-    caminho = gerar_lote("lote_01", n=120, fator_drift=0.75, semente=1)
-    print("criado:", Path(caminho).relative_to(RAIZ), "(atributos de tamanho 25% menores)")
+    caminho = config.DADOS_LOTES / f"{NOME_LOTE_DEMO}.csv"
+    if caminho.exists():
+        carregar_lotes_validados()
+        print("lote de demonstração já existe e foi validado:", caminho.name)
+        return
+    caminho = gerar_lote(
+        NOME_LOTE_DEMO, n=N_LOTE_DEMO, fator_drift=FATOR_DRIFT_DEMO, semente=SEMENTE_LOTE_DEMO
+    )
+    print("criado:", Path(caminho).name, "(seis frequências promocionais x 3, limitadas a 100%)")
 
 
 def cenario_5() -> None:
-    _substituir(RAIZ / "params.yaml", "class_weight: balanced", "class_weight: {0: 50, 1: 1}")
+    cenario_4()  # sem drift, um push apenas em params poderia não chegar ao portão do CT
+    _alterar_modelo("class_weight", {0: 1.0, 1: 10000.0})
 
 
 CENARIOS = {1: cenario_1, 2: cenario_2, 3: cenario_3, 4: cenario_4, 5: cenario_5}

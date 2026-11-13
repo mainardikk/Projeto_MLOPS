@@ -93,7 +93,9 @@ O arredondamento resulta nas quantidades abaixo.
 | Reserva | 841 | 506 | 335 | Origem dos futuros lotes do CT |
 
 Não há vetores de atributos repetidos dentro dos conjuntos nem compartilhados entre eles.
-A união cobre a base limpa. A reserva ainda não gera arquivos em `data/raw/lotes/`.
+A união cobre a base limpa. Desde o commit 4, o lote `data/raw/lotes/lote_demo_spam.csv`
+usa 400 linhas da reserva, registradas no JSON ao lado do CSV. A reserva versionada continua
+intacta; a geração de outro lote exclui os índices já utilizados, restando 441 disponíveis.
 O manifesto registra a distribuição de classes e o SHA-256 de cada CSV.
 
 ## Como reproduzir e verificar

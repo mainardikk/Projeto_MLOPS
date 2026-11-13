@@ -1,10 +1,13 @@
 """Testes de código: funções e pipeline se comportam como o contrato diz."""
 
+import json
+
 import pandas as pd
 import pytest
 from sklearn.pipeline import Pipeline
 
 from mlops_demo import config
+from mlops_demo import gate as modulo_gate
 from mlops_demo.evaluate import calcular_metricas
 from mlops_demo.features import construir_pipeline, separar_xy
 from mlops_demo.gate import decidir
@@ -83,3 +86,47 @@ def test_metricas_sem_predicoes_de_spam_nao_dividem_por_zero():
     metricas = calcular_metricas([0, 1, 1], [0, 0, 0])
     assert metricas["precisao_spam"] == 0.0
     assert metricas["recall_spam"] == 0.0
+
+
+@pytest.fixture
+def portao_temporario(tmp_path, monkeypatch):
+    for atributo in (
+        "MODELO_CANDIDATO",
+        "MODELO_CAMPEAO",
+        "METRICAS_CAMPEAO",
+        "AVALIACAO_PROCESSADA",
+        "PARAMS",
+        "RELATORIO_GATE",
+        "RELATORIO_PRESERVACAO",
+    ):
+        caminho = tmp_path / atributo
+        caminho.write_text(f"artefato de teste: {atributo}", encoding="utf-8")
+        monkeypatch.setattr(config, atributo, caminho)
+    resultado = decidir(_metricas(0.90, 0.96), _metricas(0.88, 0.95))
+    resultado["artefatos"] = modulo_gate.hashes_artefatos()
+    config.RELATORIO_GATE.write_text(json.dumps(resultado), encoding="utf-8")
+    return resultado
+
+
+def test_portao_reprovado_preserva_modelo_e_metricas_do_campeao(portao_temporario):
+    portao_temporario["aprovado"] = False
+    config.RELATORIO_GATE.write_text(json.dumps(portao_temporario), encoding="utf-8")
+    antes = (config.MODELO_CAMPEAO.read_bytes(), config.METRICAS_CAMPEAO.read_bytes())
+    with pytest.raises(SystemExit, match="reprovado"):
+        modulo_gate.promover()
+    modulo_gate.verificar_campeao()
+    assert antes == (config.MODELO_CAMPEAO.read_bytes(), config.METRICAS_CAMPEAO.read_bytes())
+
+
+def test_promocao_rejeita_candidato_alterado_apos_aprovacao(portao_temporario):
+    antes = config.MODELO_CAMPEAO.read_bytes()
+    config.MODELO_CANDIDATO.write_bytes(b"outro candidato")
+    with pytest.raises(SystemExit, match="Artefatos mudaram"):
+        modulo_gate.promover()
+    assert config.MODELO_CAMPEAO.read_bytes() == antes
+
+
+def test_promocao_aprovada_copia_o_candidato_certificado(portao_temporario):
+    modulo_gate.promover()
+    assert config.MODELO_CAMPEAO.read_bytes() == config.MODELO_CANDIDATO.read_bytes()
+    assert json.loads(config.METRICAS_CAMPEAO.read_text(encoding="utf-8"))["classe_positiva"] == 1

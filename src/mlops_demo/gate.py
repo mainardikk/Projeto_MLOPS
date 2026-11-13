@@ -16,6 +16,21 @@ import pandas as pd
 
 from mlops_demo import config
 from mlops_demo.evaluate import avaliar
+from mlops_demo.spambase import sha256
+
+
+def hashes_artefatos() -> dict:
+    return {
+        nome: sha256(caminho.read_bytes())
+        for nome, caminho in {
+            "candidato": config.MODELO_CANDIDATO,
+            "campeao": config.MODELO_CAMPEAO,
+            "metricas_campeao": config.METRICAS_CAMPEAO,
+            "avaliacao": config.AVALIACAO_PROCESSADA,
+            "contrato": config.RAIZ / "src" / "mlops_demo" / "config.py",
+            "params": config.PARAMS,
+        }.items()
+    }
 
 
 def decidir(candidato: dict, campeao: dict) -> dict:
@@ -58,17 +73,21 @@ def resumo_markdown(resultado: dict) -> str:
     linhas += ["", "| Regra | Resultado | Valor |", "|---|---|---|"]
     for v in resultado["verificacoes"]:
         linhas.append(f"| {v['regra']} | {'passou' if v['ok'] else 'FALHOU'} | {v['valor']} |")
+    if "artefatos" in resultado:
+        linhas += ["", f"SHA-256 do campeão avaliado: `{resultado['artefatos']['campeao']}`"]
     return "\n".join(linhas) + "\n"
 
 
 def executar() -> int:
+    artefatos = hashes_artefatos()
     avaliacao = pd.read_csv(config.AVALIACAO_PROCESSADA)
     candidato = avaliar(joblib.load(config.MODELO_CANDIDATO), avaliacao)
     campeao = avaliar(joblib.load(config.MODELO_CAMPEAO), avaliacao)
     resultado = decidir(candidato, campeao)
+    resultado["artefatos"] = artefatos
 
     config.RELATORIO_GATE.parent.mkdir(parents=True, exist_ok=True)
-    with open(config.RELATORIO_GATE, "w", encoding="utf-8") as arquivo:
+    with open(config.RELATORIO_GATE, "w", encoding="utf-8", newline="\n") as arquivo:
         json.dump(resultado, arquivo, indent=2, ensure_ascii=False)
     texto = resumo_markdown(resultado)
     config.RESUMO_GATE.write_text(texto, encoding="utf-8")
@@ -82,16 +101,46 @@ def promover() -> None:
         resultado = json.load(arquivo)
     if not resultado["aprovado"]:
         raise SystemExit("O candidato foi reprovado no portão: promoção bloqueada.")
+    if resultado.get("artefatos") != hashes_artefatos():
+        raise SystemExit("Artefatos mudaram desde a avaliação: execute novamente o portão.")
     config.MODELO_CAMPEAO.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(config.MODELO_CANDIDATO, config.MODELO_CAMPEAO)
-    metricas = dict(resultado["candidato"], origem="treinamento contínuo (CT)")
-    with open(config.METRICAS_CAMPEAO, "w", encoding="utf-8") as arquivo:
+    metricas = dict(
+        resultado["candidato"],
+        origem="treinamento contínuo (CT)",
+        dataset="Spambase",
+        classe_positiva=config.CLASSE_SPAM,
+        sha256_avaliacao=resultado["artefatos"]["avaliacao"],
+    )
+    with open(config.METRICAS_CAMPEAO, "w", encoding="utf-8", newline="\n") as arquivo:
         json.dump(metricas, arquivo, indent=2, ensure_ascii=False)
     print("Campeão atualizado em", config.MODELO_CAMPEAO)
+
+
+def verificar_campeao() -> None:
+    """Prova que a avaliação, aprovada ou reprovada, preservou modelo e métricas do campeão."""
+    resultado = json.loads(config.RELATORIO_GATE.read_text(encoding="utf-8"))
+    atuais = {
+        "campeao": sha256(config.MODELO_CAMPEAO.read_bytes()),
+        "metricas_campeao": sha256(config.METRICAS_CAMPEAO.read_bytes()),
+    }
+    anteriores = {chave: resultado["artefatos"][chave] for chave in atuais}
+    preservado = anteriores == atuais
+    config.RELATORIO_PRESERVACAO.write_text(
+        json.dumps({"preservado": preservado, "antes": anteriores, "depois": atuais}, indent=2)
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    if not preservado:
+        raise SystemExit("O campeão mudou durante a avaliação do candidato.")
+    print("Campeão preservado: SHA-256 do modelo e das métricas não mudou.")
 
 
 if __name__ == "__main__":
     if "--promover" in sys.argv:
         promover()
+    elif "--verificar-campeao" in sys.argv:
+        verificar_campeao()
     else:
         sys.exit(executar())

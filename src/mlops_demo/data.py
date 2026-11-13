@@ -6,6 +6,7 @@ Uso na linha de comando:
     python -m mlops_demo.data validar   # valida todos os CSVs de data/raw/
 """
 
+import json
 import re
 import shutil
 import sys
@@ -15,7 +16,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from mlops_demo import config
-from mlops_demo.spambase import PASTA_SPAMBASE, SEMENTE, validar_spambase, verificar
+from mlops_demo.spambase import PASTA_SPAMBASE, SEMENTE, sha256, validar_spambase, verificar
 
 SEMENTE_DADOS = SEMENTE  # a divisão do commit 2 é fixa; não sorteie um holdout novo
 
@@ -49,22 +50,46 @@ def aplicar_drift(df: pd.DataFrame, fator: float) -> pd.DataFrame:
     return saida
 
 
-def gerar_lote(nome: str, n: int = 120, fator_drift: float = 1.0, semente: int = 1) -> str:
+def gerar_lote(nome: str, n: int = 400, fator_drift: float = 1.0, semente: int = 1) -> str:
     """Cria data/raw/lotes/<nome>.csv a partir da reserva, opcionalmente com drift."""
     if not re.fullmatch(r"[A-Za-z0-9_-]+", nome):
         raise ValueError("Nome do lote deve conter apenas letras, números, hífen e sublinhado.")
     if n < 4:
         raise ValueError("Um lote precisa de pelo menos quatro linhas para treino/avaliação.")
+    caminho = config.DADOS_LOTES / f"{nome}.csv"
+    if caminho.exists() or caminho.with_suffix(".json").exists():
+        raise FileExistsError(f"O lote {nome} já existe; não será sobrescrito.")
     _, _, reserva = dividir_dataset()
-    lote = reserva.sample(n=min(n, len(reserva)), random_state=semente).reset_index(drop=True)
+    _, usados = carregar_lotes_validados()
+    disponiveis = reserva.drop(index=sorted(usados))
+    if n > len(disponiveis):
+        raise ValueError(
+            f"Reserva insuficiente: solicitadas {n} linhas, disponíveis {len(disponiveis)}."
+        )
+    amostra = disponiveis.sample(n=n, random_state=semente)
+    indices = [int(i) for i in amostra.index]
+    lote = amostra.reset_index(drop=True)
+    if set(lote[config.ALVO]) != {0, 1} or lote[config.ALVO].value_counts().min() < 2:
+        raise ValueError("O lote precisa de pelo menos duas mensagens de cada classe.")
     if fator_drift != 1.0:
         lote = aplicar_drift(lote, fator_drift)
     config.DADOS_LOTES.mkdir(parents=True, exist_ok=True)
-    caminho = config.DADOS_LOTES / f"{nome}.csv"
-    if caminho.exists():
-        raise FileExistsError(f"O lote {nome} já existe; não será sobrescrito.")
     validar_spambase(lote)
-    lote.to_csv(caminho, index=False, float_format="%.10g", lineterminator="\n")
+    conteudo = lote.to_csv(index=False, float_format="%.10g", lineterminator="\n").encode("utf-8")
+    metadados = {
+        "dataset": "Spambase",
+        "sha256_reserva": sha256(config.BASE_RESERVA.read_bytes()),
+        "indices_reserva": indices,
+        "semente": semente,
+        "fator_drift": fator_drift,
+        "sha256_csv": sha256(conteudo),
+    }
+    caminho.write_bytes(conteudo)
+    caminho.with_suffix(".json").write_text(
+        json.dumps(metadados, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     return str(caminho)
 
 
@@ -84,35 +109,84 @@ def listar_lotes() -> list:
     return sorted(config.DADOS_LOTES.glob("*.csv"))
 
 
-def preparar() -> None:
-    """Junta a base com os lotes. Metade de cada lote treina, a outra metade avalia.
+def carregar_lotes_validados() -> tuple[list[pd.DataFrame], set[int]]:
+    """Confere a origem dos lotes sintéticos e impede reutilizar a mesma linha da reserva."""
+    tabelas, usados = [], set()
+    reserva = pd.read_csv(config.BASE_RESERVA)
+    hash_reserva = sha256(config.BASE_RESERVA.read_bytes())
+    for caminho in listar_lotes():
+        tabela = pd.read_csv(caminho)
+        validar_spambase(tabela)
+        meta = json.loads(caminho.with_suffix(".json").read_text(encoding="utf-8"))
+        if not isinstance(meta, dict):
+            raise ValueError(f"Metadados inválidos no lote {caminho.name}.")
+        indices = meta.get("indices_reserva", [])
+        fator = meta.get("fator_drift")
+        if (
+            not isinstance(indices, list)
+            or not isinstance(fator, (int, float))
+            or isinstance(fator, bool)
+            or not np.isfinite(fator)
+            or fator <= 0
+        ):
+            raise ValueError(f"Índices ou fator de drift inválidos no lote {caminho.name}.")
+        if (
+            meta.get("dataset") != "Spambase"
+            or meta.get("sha256_reserva") != hash_reserva
+            or meta.get("sha256_csv") != sha256(caminho.read_bytes())
+            or len(indices) != len(tabela)
+            or any(type(i) is not int or i < 0 or i >= len(reserva) for i in indices)
+            or len(set(indices)) != len(indices)
+        ):
+            raise ValueError(f"Proveniência ou hash inválido no lote {caminho.name}.")
+        if usados.intersection(indices):
+            raise ValueError(f"Linhas da reserva reutilizadas no lote {caminho.name}.")
+        esperado = aplicar_drift(reserva.loc[indices].reset_index(drop=True), fator)
+        if not np.allclose(tabela.to_numpy(), esperado.to_numpy(), rtol=0, atol=1e-8):
+            raise ValueError(f"O lote {caminho.name} diverge das linhas de reserva declaradas.")
+        usados.update(indices)
+        tabelas.append(tabela)
+    return tabelas, usados
+
+
+def preparar_particoes(lotes: list[pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Metade de cada lote treina, a outra metade avalia; as metades são fixas.
 
     O holdout fixo e as metades de avaliação dos lotes formam a base de avaliação. Assim campeão
-    e candidato são comparados no MESMO conjunto, e o campeão nunca viu esses dados.
+    e candidato são comparados no MESMO conjunto, sem treinar nessas linhas de avaliação.
     """
     treino = [pd.read_csv(config.BASE_TREINO)]
     avaliacao = [pd.read_csv(config.BASE_HOLDOUT)]
     validar_spambase(treino[0])
     validar_spambase(avaliacao[0])
-    for caminho in listar_lotes():
-        lote = pd.read_csv(caminho)
+    for lote in lotes:
         validar_spambase(lote)
         metade_treino, metade_aval = train_test_split(
             lote, test_size=0.5, stratify=lote[config.ALVO], random_state=SEMENTE_DADOS
         )
         treino.append(metade_treino)
         avaliacao.append(metade_aval)
+    treino = pd.concat(treino, ignore_index=True)
+    avaliacao = pd.concat(avaliacao, ignore_index=True)
+    chaves_treino = set(map(tuple, treino[config.FEATURES].to_numpy()))
+    chaves_aval = set(map(tuple, avaliacao[config.FEATURES].to_numpy()))
+    if len(chaves_treino) != len(treino) or len(chaves_aval) != len(avaliacao):
+        raise ValueError("Há vetores duplicados nos conjuntos preparados para CT.")
+    if not chaves_treino.isdisjoint(chaves_aval):
+        raise ValueError("Vazamento: treino e avaliação do CT compartilham atributos.")
+    return treino, avaliacao
+
+
+def preparar() -> None:
+    lotes, _ = carregar_lotes_validados()
+    treino, avaliacao = preparar_particoes(lotes)
     config.DADOS_PROCESSADOS.mkdir(parents=True, exist_ok=True)
-    pd.concat(treino, ignore_index=True).to_csv(
-        config.TREINO_PROCESSADO, index=False, float_format="%.10g", lineterminator="\n"
-    )
-    pd.concat(avaliacao, ignore_index=True).to_csv(
+    treino.to_csv(config.TREINO_PROCESSADO, index=False, float_format="%.10g", lineterminator="\n")
+    avaliacao.to_csv(
         config.AVALIACAO_PROCESSADA, index=False, float_format="%.10g", lineterminator="\n"
     )
-    print(f"lotes usados: {len(listar_lotes())}")
-    n_treino = sum(len(t) for t in treino)
-    n_avaliacao = sum(len(a) for a in avaliacao)
-    print(f"treino: {n_treino} linhas | avaliação: {n_avaliacao} linhas")
+    print(f"lotes usados: {len(lotes)}")
+    print(f"treino: {len(treino)} linhas | avaliação: {len(avaliacao)} linhas")
 
 
 def validar_tudo() -> int:
@@ -124,6 +198,13 @@ def validar_tudo() -> int:
         status = "OK" if not problemas else "FALHOU: " + "; ".join(problemas)
         print(f"{caminho.name}: {status}")
         codigo |= 1 if problemas else 0
+    if not codigo:
+        try:
+            lotes, _ = carregar_lotes_validados()
+            preparar_particoes(lotes)
+        except (OSError, ValueError, KeyError) as erro:
+            print(f"Proveniência/separação dos lotes: FALHOU: {erro}")
+            return 1
     return codigo
 
 
