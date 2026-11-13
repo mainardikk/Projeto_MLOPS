@@ -1,0 +1,24 @@
+{
+  "imagem_publica": true,
+  "digest": "sha256:a1e1983804e44ff55f0e888b100131b93f8389a9f3649a47650cae2118579820",
+  "pagina_pacote_status": 200,
+  "paginas_pdf": 2,
+  "testes_locais": 75,
+  "arquivos_publicados_conferidos": [
+    {
+      "arquivo": "ADAPTACAO.md",
+      "bytes": 6662,
+      "sha256_confere": true
+    },
+    {
+      "arquivo": "ADAPTACAO.pdf",
+      "bytes": 138994,
+      "sha256_confere": true
+    },
+    {
+      "arquivo": "ENTREGA.md",
+      "bytes": 1654,
+      "sha256_confere": true
+    }
+  ]
+}

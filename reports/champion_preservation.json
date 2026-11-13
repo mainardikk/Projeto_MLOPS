@@ -1,0 +1,11 @@
+{
+  "preservado": true,
+  "antes": {
+    "campeao": "2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9",
+    "metricas_campeao": "88632fc4da3bb1c2f6fb7cdd3a651a6d83b773bd49a3365b0ec9c037b120f51e"
+  },
+  "depois": {
+    "campeao": "2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9",
+    "metricas_campeao": "88632fc4da3bb1c2f6fb7cdd3a651a6d83b773bd49a3365b0ec9c037b120f51e"
+  }
+}

@@ -1,0 +1,212 @@
+All checks passed!
+26 files already formatted
+base_treino.csv: OK
+base_holdout.csv: OK
+lote_demo_spam.csv: OK
+....................                                                     [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\Bruno Nava Mainardi\Documents\GitHub\Projeto_MLOPS\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+20 passed, 55 deselected, 1 warning in 1.13s
+.............................                                            [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\Bruno Nava Mainardi\Documents\GitHub\Projeto_MLOPS\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+29 passed, 46 deselected, 1 warning in 2.72s
+F...FF.F...FF                                                            [100%]
+================================== FAILURES ===================================
+__________ test_cenario_3_reprova_o_recall_por_regularizacao_extrema __________
+
+cenarios_isolados = (<module 'cenarios_demo' from 'C:\\Users\\Bruno Nava Mainardi\\Documents\\GitHub\\Projeto_MLOPS\\demo\\cenarios.py'>, ...Users/Bruno Nava Mainardi/AppData/Local/Temp/pytest-of-Bruno Nava Mainardi/pytest-12/test_cenario_3_reprova_o_recal0'))
+base_treino =       word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0               0.00               0.00  ...       461     1
+2521            0.00               0.00  ...                        77     0
+
+[2522 rows x 58 columns]
+base_holdout =      word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0              0.00               0.00  .....         621     1
+840            0.00               0.00  ...                        40     0
+
+[841 rows x 58 columns]
+
+    @pytest.mark.modelo
+    def test_cenario_3_reprova_o_recall_por_regularizacao_extrema(
+        cenarios_isolados, base_treino, base_holdout
+    ):
+        modulo, raiz = cenarios_isolados
+        modulo.cenario_3()
+        params = yaml.safe_load((raiz / "params.yaml").read_text(encoding="utf-8"))
+        metricas = avaliar(treinar(base_treino, params), base_holdout)
+>       assert metricas["recall_spam"] < config.RECALL_MINIMO
+E       assert 1.0 < 0.85
+E        +  where 0.85 = config.RECALL_MINIMO
+
+tests\test_cenarios.py:65: AssertionError
+_________ test_treino_com_o_codigo_e_params_atuais_cumpre_o_contrato __________
+
+modelo_atual = Pipeline(steps=[('logaritmo',
+                 FunctionTransformer(feature_names_out='one-to-one',
+                   ...ssion(C=10.0, class_weight={0: 1.0, 1: 10000.0},
+                                    max_iter=3000, random_state=42))])
+base_holdout =      word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0              0.00               0.00  .....         621     1
+840            0.00               0.00  ...                        40     0
+
+[841 rows x 58 columns]
+
+    def test_treino_com_o_codigo_e_params_atuais_cumpre_o_contrato(modelo_atual, base_holdout):
+        """Se alguém mexer no código ou no params.yaml, o CI treina de novo e confere os limiares."""
+        metricas = avaliar(modelo_atual, base_holdout)
+        assert metricas["recall_spam"] >= config.RECALL_MINIMO, metricas
+>       assert metricas["precisao_spam"] >= config.PRECISAO_MINIMA, metricas
+E       AssertionError: {'precisao_spam': 0.4699300699300699, 'recall_spam': 1.0, 'acuracia': 0.549346016646849, 'n_amostras': 841, ...}
+E       assert 0.4699300699300699 >= 0.93
+E        +  where 0.93 = config.PRECISAO_MINIMA
+
+tests\test_modelo.py:45: AssertionError
+____________________ test_modelo_supera_o_baseline_ingenuo ____________________
+
+modelo_atual = Pipeline(steps=[('logaritmo',
+                 FunctionTransformer(feature_names_out='one-to-one',
+                   ...ssion(C=10.0, class_weight={0: 1.0, 1: 10000.0},
+                                    max_iter=3000, random_state=42))])
+base_treino =       word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0               0.00               0.00  ...       461     1
+2521            0.00               0.00  ...                        77     0
+
+[2522 rows x 58 columns]
+base_holdout =      word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0              0.00               0.00  .....         621     1
+840            0.00               0.00  ...                        40     0
+
+[841 rows x 58 columns]
+
+    def test_modelo_supera_o_baseline_ingenuo(modelo_atual, base_treino, base_holdout):
+        X_tr, y_tr = separar_xy(base_treino)
+        X_te, y_te = separar_xy(base_holdout)
+        baseline = DummyClassifier(strategy="most_frequent").fit(X_tr, y_tr)
+        nota_baseline = calcular_metricas(y_te, baseline.predict(X_te))["acuracia"]
+        nota_modelo = calcular_metricas(y_te, modelo_atual.predict(X_te))["acuracia"]
+>       assert nota_modelo > nota_baseline + 0.1
+E       assert 0.549346016646849 > (0.6004756242568371 + 0.1)
+
+tests\test_modelo.py:54: AssertionError
+_______________ test_modelo_consegue_memorizar_um_lote_pequeno ________________
+
+base_treino =       word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0               0.00               0.00  ...       461     1
+2521            0.00               0.00  ...                        77     0
+
+[2522 rows x 58 columns]
+params = {'semente': 42, 'preprocessamento': {'log1p': True}, 'validacao': {'n_splits': 5, 'recall_selecao_minimo': 0.9, 'grade...asse_legitima': [1.0, 1.15, 1.25, 1.5]}, 'modelo': {'C': 10.0, 'max_iter': 3000, 'class_weight': {0: 1.0, 1: 10000.0}}}
+
+    def test_modelo_consegue_memorizar_um_lote_pequeno(base_treino, params):
+        """Teste clássico de sanidade: se nem um lote pequeno é aprendido, há um bug no pipeline."""
+        pequeno = base_treino.sample(40, random_state=0)
+        modelo = treinar(pequeno, params)
+        X, y = separar_xy(pequeno)
+>       assert (modelo.predict(X) == y).mean() >= 0.95
+E       assert np.float64(0.925) >= 0.95
+E        +  where np.float64(0.925) = mean()
+E        +    where mean = array([0, 0, ..., 1, 0, 1, 0]) == 841     0\n180..., dtype: int64
+E             
+E             Use -v to get more diff.mean
+
+tests\test_modelo.py:69: AssertionError
+______ test_no_maximo_cinco_por_cento_das_mensagens_legitimas_viram_spam ______
+
+modelo_atual = Pipeline(steps=[('logaritmo',
+                 FunctionTransformer(feature_names_out='one-to-one',
+                   ...ssion(C=10.0, class_weight={0: 1.0, 1: 10000.0},
+                                    max_iter=3000, random_state=42))])
+base_holdout =      word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0              0.00               0.00  .....         621     1
+840            0.00               0.00  ...                        40     0
+
+[841 rows x 58 columns]
+
+    def test_no_maximo_cinco_por_cento_das_mensagens_legitimas_viram_spam(modelo_atual, base_holdout):
+        legitimas = base_holdout.loc[base_holdout[config.ALVO] == 0, config.FEATURES]
+        taxa_falsos_positivos = (modelo_atual.predict(legitimas) == config.CLASSE_SPAM).mean()
+>       assert taxa_falsos_positivos <= 0.05
+E       assert np.float64(0.7504950495049505) <= 0.05
+
+tests\test_modelo.py:105: AssertionError
+________ test_lote_promocional_dispara_drift_e_retreino_cumpre_portao _________
+
+base_treino =       word_freq_make  word_freq_address  ...  capital_run_length_total  spam
+0               0.00               0.00  ...       461     1
+2521            0.00               0.00  ...                        77     0
+
+[2522 rows x 58 columns]
+campeao = Pipeline(steps=[('logaritmo',
+                 FunctionTransformer(feature_names_out='one-to-one',
+                   ...egression(C=10.0, class_weight={0: 1.5, 1: 1.0},
+                                    max_iter=3000, random_state=42))])
+params = {'semente': 42, 'preprocessamento': {'log1p': True}, 'validacao': {'n_splits': 5, 'recall_selecao_minimo': 0.9, 'grade...asse_legitima': [1.0, 1.15, 1.25, 1.5]}, 'modelo': {'C': 10.0, 'max_iter': 3000, 'class_weight': {0: 1.0, 1: 10000.0}}}
+
+    def test_lote_promocional_dispara_drift_e_retreino_cumpre_portao(base_treino, campeao, params):
+        lotes, _ = carregar_lotes_validados()
+        assert lotes, "O lote de demonstração faz parte desta entrega."
+        novo = pd.concat(lotes, ignore_index=True)
+        assert deve_retreinar(int(detectar_drift(base_treino, novo)["drift"].sum()))
+        treino, avaliacao = preparar_particoes(lotes)
+        candidato = treinar(treino, params)
+        resultado = decidir(avaliar(candidato, avaliacao), avaliar(campeao, avaliacao))
+>       assert resultado["aprovado"], resultado
+E       AssertionError: {'aprovado': False, 'verificacoes': [{'regra': 'recall spam do candidato >= 0.85', 'ok': True, 'valor': 1.0}, {'regra'..._spam': 0.9345549738219895, 'recall_spam': 0.864406779661017, 'acuracia': 0.9221902017291066, 'n_amostras': 1041, ...}}
+E       assert False
+
+tests\test_modelo.py:116: AssertionError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\Bruno Nava Mainardi\Documents\GitHub\Projeto_MLOPS\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_cenarios.py::test_cenario_3_reprova_o_recall_por_regularizacao_extrema
+FAILED tests/test_modelo.py::test_treino_com_o_codigo_e_params_atuais_cumpre_o_contrato
+FAILED tests/test_modelo.py::test_modelo_supera_o_baseline_ingenuo - assert 0...
+FAILED tests/test_modelo.py::test_modelo_consegue_memorizar_um_lote_pequeno
+FAILED tests/test_modelo.py::test_no_maximo_cinco_por_cento_das_mensagens_legitimas_viram_spam
+FAILED tests/test_modelo.py::test_lote_promocional_dispara_drift_e_retreino_cumpre_portao
+6 failed, 7 passed, 62 deselected, 1 warning in 1.43s
+.............                                                            [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\Bruno Nava Mainardi\Documents\GitHub\Projeto_MLOPS\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+13 passed, 62 deselected, 1 warning in 0.53s
+
+=== Lint (ruff check)
+
+=== Formatação (ruff format --check)
+
+=== Validar os dados brutos
+
+=== Testes de código
+
+=== Testes de dados
+
+=== Testes de modelo
+--- FALHOU: Testes de modelo
+
+=== Testes de contrato da API
+
+=== Resumo
+  [ok] Lint (ruff check)
+  [ok] Formatação (ruff format --check)
+  [ok] Validar os dados brutos
+  [ok] Testes de código
+  [ok] Testes de dados
+  [FALHOU] Testes de modelo
+  [ok] Testes de contrato da API

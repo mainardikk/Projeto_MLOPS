@@ -1,0 +1,55 @@
+## Drift: 5 de 57 atributos
+
+Lotes comparados: lote_demo_spam.csv (400 linhas)
+
+| Atributo | KS | p-valor |
+|---|---|---|
+| word_freq_you | 0.409 | 1.3e-52 |
+| word_freq_your | 0.314 | 9.3e-31 |
+| char_freq_exclamation | 0.167 | 6.3e-09 |
+| char_freq_dollar | 0.12 | 9.3e-05 |
+| word_freq_free | 0.12 | 8.4e-05 |
+
+Gatilho (>= 4 atributos com drift): DISPARADO, retreinar
+
+Stage 'preparar' didn't change, skipping
+Running stage 'treinar':
+> python -m mlops_demo.train
+candidato: {"precisao_spam": 0.46878547105561863, "recall_spam": 1.0, "acuracia": 0.5504322766570605, "n_amostras": 1041, "verdadeiros_negativos": 160, "falsos_positivos": 468, "falsos_negativos": 0, "verdadeiros_positivos": 413}
+Updating lock file 'dvc.lock'
+
+To track the changes with git, run:
+
+	git add dvc.lock
+
+To enable auto staging, run:
+
+	dvc config core.autostage true
+Use `dvc push` to send your updates to remote storage.
+## Portão de qualidade: REPROVADO
+
+| Modelo | Recall spam | Precisão spam | Amostras |
+|---|---|---|---|
+| campeao | 0.864 | 0.935 | 1041 |
+| candidato | 1.000 | 0.469 | 1041 |
+
+| Regra | Resultado | Valor |
+|---|---|---|
+| recall spam do candidato >= 0.85 | passou | 1.0 |
+| precisão spam do candidato >= 0.93 | FALHOU | 0.4688 |
+| precisão spam do candidato >= precisão do campeão (mesmo conjunto) | FALHOU | 0.4688 x 0.9346 |
+
+SHA-256 do campeão avaliado: `2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9`
+
+
+=== Detectar drift
+
+=== Reproduzir o pipeline (dvc repro)
+
+=== Portão de qualidade
+--- FALHOU: Portão de qualidade
+
+=== Resumo
+  [ok] Detectar drift
+  [ok] Reproduzir o pipeline (dvc repro)
+  [FALHOU] Portão de qualidade

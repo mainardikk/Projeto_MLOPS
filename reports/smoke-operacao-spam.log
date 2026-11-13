@@ -1,0 +1,9 @@
+INFO:     Started server process [54388]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18004 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51829 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51836 - "GET /schema HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51837 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51838 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51839 - "POST /predict HTTP/1.1" 422 Unprocessable Entity

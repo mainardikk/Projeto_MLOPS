@@ -1,0 +1,48 @@
+{
+  "aprovado": true,
+  "verificacoes": [
+    {
+      "regra": "recall spam do candidato >= 0.85",
+      "ok": true,
+      "valor": 0.8644
+    },
+    {
+      "regra": "precisão spam do candidato >= 0.93",
+      "ok": true,
+      "valor": 0.9444
+    },
+    {
+      "regra": "precisão spam do candidato >= precisão do campeão (mesmo conjunto)",
+      "ok": true,
+      "valor": "0.9444 x 0.9346"
+    }
+  ],
+  "candidato": {
+    "precisao_spam": 0.9444444444444444,
+    "recall_spam": 0.864406779661017,
+    "acuracia": 0.9260326609029779,
+    "n_amostras": 1041,
+    "verdadeiros_negativos": 607,
+    "falsos_positivos": 21,
+    "falsos_negativos": 56,
+    "verdadeiros_positivos": 357
+  },
+  "campeao": {
+    "precisao_spam": 0.9345549738219895,
+    "recall_spam": 0.864406779661017,
+    "acuracia": 0.9221902017291066,
+    "n_amostras": 1041,
+    "verdadeiros_negativos": 603,
+    "falsos_positivos": 25,
+    "falsos_negativos": 56,
+    "verdadeiros_positivos": 357
+  },
+  "artefatos": {
+    "candidato": "3c4e32d240161c6fff1b1e481ea0b2f24248c8bd4ce5c0214a425dd315640551",
+    "campeao": "2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9",
+    "metricas_campeao": "88632fc4da3bb1c2f6fb7cdd3a651a6d83b773bd49a3365b0ec9c037b120f51e",
+    "avaliacao": "9df978c0cb753dab6709ec5669ed6cafdfb1d547243ad9ef41cb6b3a39778d89",
+    "contrato": "e146745ac05746f60362c4ca85a03c924e346676481d3e3cd08498a1e0e0c03a",
+    "params": "2fa8270baa0a0670bb92e48812c321fd4f1e2cfc1cb86b25d7034f2e788efd7b"
+  }
+}

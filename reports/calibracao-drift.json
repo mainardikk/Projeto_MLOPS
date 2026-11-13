@@ -1,0 +1,114 @@
+[
+  {
+    "n": 400,
+    "fator": 2.0,
+    "semente": 1,
+    "atributos_drift": 3,
+    "gatilho": false,
+    "candidato": {
+      "precisao_spam": 0.9442970822281167,
+      "recall_spam": 0.8619854721549637,
+      "acuracia": 0.9250720461095101,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 607,
+      "falsos_positivos": 21,
+      "falsos_negativos": 57,
+      "verdadeiros_positivos": 356
+    },
+    "campeao": {
+      "precisao_spam": 0.9393139841688655,
+      "recall_spam": 0.8619854721549637,
+      "acuracia": 0.9231508165225745,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 605,
+      "falsos_positivos": 23,
+      "falsos_negativos": 57,
+      "verdadeiros_positivos": 356
+    },
+    "aprovado": true
+  },
+  {
+    "n": 400,
+    "fator": 3.0,
+    "semente": 1,
+    "atributos_drift": 5,
+    "gatilho": true,
+    "candidato": {
+      "precisao_spam": 0.9444444444444444,
+      "recall_spam": 0.864406779661017,
+      "acuracia": 0.9260326609029779,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 607,
+      "falsos_positivos": 21,
+      "falsos_negativos": 56,
+      "verdadeiros_positivos": 357
+    },
+    "campeao": {
+      "precisao_spam": 0.9345549738219895,
+      "recall_spam": 0.864406779661017,
+      "acuracia": 0.9221902017291066,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 603,
+      "falsos_positivos": 25,
+      "falsos_negativos": 56,
+      "verdadeiros_positivos": 357
+    },
+    "aprovado": true
+  },
+  {
+    "n": 400,
+    "fator": 4.0,
+    "semente": 1,
+    "atributos_drift": 6,
+    "gatilho": true,
+    "candidato": {
+      "precisao_spam": 0.9421052631578948,
+      "recall_spam": 0.8668280871670703,
+      "acuracia": 0.9260326609029779,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 606,
+      "falsos_positivos": 22,
+      "falsos_negativos": 55,
+      "verdadeiros_positivos": 358
+    },
+    "campeao": {
+      "precisao_spam": 0.9321148825065274,
+      "recall_spam": 0.864406779661017,
+      "acuracia": 0.9212295869356388,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 602,
+      "falsos_positivos": 26,
+      "falsos_negativos": 56,
+      "verdadeiros_positivos": 357
+    },
+    "aprovado": true
+  },
+  {
+    "n": 400,
+    "fator": 5.0,
+    "semente": 1,
+    "atributos_drift": 6,
+    "gatilho": true,
+    "candidato": {
+      "precisao_spam": 0.9396325459317585,
+      "recall_spam": 0.8668280871670703,
+      "acuracia": 0.9250720461095101,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 605,
+      "falsos_positivos": 23,
+      "falsos_negativos": 55,
+      "verdadeiros_positivos": 358
+    },
+    "campeao": {
+      "precisao_spam": 0.9296875,
+      "recall_spam": 0.864406779661017,
+      "acuracia": 0.920268972142171,
+      "n_amostras": 1041,
+      "verdadeiros_negativos": 601,
+      "falsos_positivos": 27,
+      "falsos_negativos": 56,
+      "verdadeiros_positivos": 357
+    },
+    "aprovado": true
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "models/champion/model.joblib": "2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9",
+  "models/champion/metrics.json": "88632fc4da3bb1c2f6fb7cdd3a651a6d83b773bd49a3365b0ec9c037b120f51e",
+  "data/raw/base_treino.csv": "c79510e1e2e393727dee06326dc736b48e018a399df1b90422c7df9093ef20eb",
+  "data/raw/base_holdout.csv": "be166300ce7c57c7a3dc802f2e0d2b75d0e57ae37fe09b20b603826f8aa404df",
+  "data/raw/lotes/lote_demo_spam.csv": "64125164afca03af40d03c73b39c37dfbdb7f6ae465be298e6390ae130040b90",
+  "data/raw/lotes/lote_demo_spam.json": "538752fcc4f59b4723efad5b73120c6a50eddc84efd8c62f96059de71c8782b7"
+}

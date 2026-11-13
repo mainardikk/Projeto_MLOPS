@@ -1,0 +1,10 @@
+{
+  "precisao_spam": 0.9444444444444444,
+  "recall_spam": 0.864406779661017,
+  "acuracia": 0.9260326609029779,
+  "n_amostras": 1041,
+  "verdadeiros_negativos": 607,
+  "falsos_positivos": 21,
+  "falsos_negativos": 56,
+  "verdadeiros_positivos": 357
+}

@@ -1,0 +1,37 @@
+{
+  "metodo": "git apply --index e comparacao exata das arvores Git, sem criar commits",
+  "etapas": [
+    {
+      "etapa": 1,
+      "commit_fonte": "970867d",
+      "arvore_exata": true
+    },
+    {
+      "etapa": 2,
+      "commit_fonte": "0f1cb05",
+      "arvore_exata": true
+    },
+    {
+      "etapa": 3,
+      "commit_fonte": "728be4e",
+      "arvore_exata": true
+    },
+    {
+      "etapa": 4,
+      "commit_fonte": "7041842",
+      "arvore_exata": true
+    },
+    {
+      "etapa": 5,
+      "commit_fonte": "ac403ee",
+      "arvore_exata": true
+    },
+    {
+      "etapa": 6,
+      "commit_fonte": "4e45c7e",
+      "arvore_exata": true
+    }
+  ],
+  "gerador_pdf_testado": true,
+  "paginas_pdf_no_teste": 2
+}

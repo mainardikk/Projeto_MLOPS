@@ -1,0 +1,48 @@
+{
+  "aprovado": false,
+  "verificacoes": [
+    {
+      "regra": "recall spam do candidato >= 0.85",
+      "ok": true,
+      "valor": 1.0
+    },
+    {
+      "regra": "precis\u00e3o spam do candidato >= 0.93",
+      "ok": false,
+      "valor": 0.4688
+    },
+    {
+      "regra": "precis\u00e3o spam do candidato >= precis\u00e3o do campe\u00e3o (mesmo conjunto)",
+      "ok": false,
+      "valor": "0.4688 x 0.9346"
+    }
+  ],
+  "candidato": {
+    "precisao_spam": 0.46878547105561863,
+    "recall_spam": 1.0,
+    "acuracia": 0.5504322766570605,
+    "n_amostras": 1041,
+    "verdadeiros_negativos": 160,
+    "falsos_positivos": 468,
+    "falsos_negativos": 0,
+    "verdadeiros_positivos": 413
+  },
+  "campeao": {
+    "precisao_spam": 0.9345549738219895,
+    "recall_spam": 0.864406779661017,
+    "acuracia": 0.9221902017291066,
+    "n_amostras": 1041,
+    "verdadeiros_negativos": 603,
+    "falsos_positivos": 25,
+    "falsos_negativos": 56,
+    "verdadeiros_positivos": 357
+  },
+  "artefatos": {
+    "candidato": "165d830bee224e5da0e69a68af3e3c040c5b8e25cda5788c54cd9a7f8535325a",
+    "campeao": "2f7f3e47d5528179a850fe686ed92017fa748190ff8b0d86f6b0020aa95e64e9",
+    "metricas_campeao": "88632fc4da3bb1c2f6fb7cdd3a651a6d83b773bd49a3365b0ec9c037b120f51e",
+    "avaliacao": "9df978c0cb753dab6709ec5669ed6cafdfb1d547243ad9ef41cb6b3a39778d89",
+    "contrato": "e146745ac05746f60362c4ca85a03c924e346676481d3e3cd08498a1e0e0c03a",
+    "params": "c1412cbc29d3b70c1ef6d29e1b84b265839b510adb6d45208df1ec22de4a8505"
+  }
+}

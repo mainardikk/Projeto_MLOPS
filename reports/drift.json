@@ -1,0 +1,353 @@
+{
+  "lotes": [
+    "lote_demo_spam.csv"
+  ],
+  "atributos_drift": 5,
+  "minimo_atributos": 4,
+  "limite_p": 0.01,
+  "retreinar": true,
+  "atributos": [
+    {
+      "atributo": "word_freq_you",
+      "ks": 0.409,
+      "p_valor": 1.3347779580550796e-52,
+      "drift": true
+    },
+    {
+      "atributo": "word_freq_your",
+      "ks": 0.314,
+      "p_valor": 9.294417825588063e-31,
+      "drift": true
+    },
+    {
+      "atributo": "char_freq_exclamation",
+      "ks": 0.167,
+      "p_valor": 6.2702613439018606e-09,
+      "drift": true
+    },
+    {
+      "atributo": "char_freq_dollar",
+      "ks": 0.12,
+      "p_valor": 9.311318838091375e-05,
+      "drift": true
+    },
+    {
+      "atributo": "word_freq_free",
+      "ks": 0.12,
+      "p_valor": 8.369259239675064e-05,
+      "drift": true
+    },
+    {
+      "atributo": "word_freq_money",
+      "ks": 0.085,
+      "p_valor": 0.013077196314758862,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_internet",
+      "ks": 0.053,
+      "p_valor": 0.2694600018271283,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_1999",
+      "ks": 0.046,
+      "p_valor": 0.43498405264167506,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_will",
+      "ks": 0.044,
+      "p_valor": 0.5012013723013392,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_650",
+      "ks": 0.04,
+      "p_valor": 0.6147799522712929,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_edu",
+      "ks": 0.04,
+      "p_valor": 0.6335535773530198,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_mail",
+      "ks": 0.039,
+      "p_valor": 0.6574993945612149,
+      "drift": false
+    },
+    {
+      "atributo": "capital_run_length_total",
+      "ks": 0.037,
+      "p_valor": 0.7008600262747031,
+      "drift": false
+    },
+    {
+      "atributo": "char_freq_hash",
+      "ks": 0.037,
+      "p_valor": 0.7038939694256894,
+      "drift": false
+    },
+    {
+      "atributo": "char_freq_semicolon",
+      "ks": 0.036,
+      "p_valor": 0.746194645551515,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_re",
+      "ks": 0.032,
+      "p_valor": 0.8533749126057962,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_over",
+      "ks": 0.031,
+      "p_valor": 0.8756929087585779,
+      "drift": false
+    },
+    {
+      "atributo": "char_freq_parenthesis",
+      "ks": 0.03,
+      "p_valor": 0.9073562266836112,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_our",
+      "ks": 0.028,
+      "p_valor": 0.9384134962891619,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_000",
+      "ks": 0.027,
+      "p_valor": 0.961251318337097,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_address",
+      "ks": 0.027,
+      "p_valor": 0.9498609367540313,
+      "drift": false
+    },
+    {
+      "atributo": "capital_run_length_longest",
+      "ks": 0.027,
+      "p_valor": 0.9619821860466394,
+      "drift": false
+    },
+    {
+      "atributo": "capital_run_length_average",
+      "ks": 0.025,
+      "p_valor": 0.9751621534081066,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_order",
+      "ks": 0.024,
+      "p_valor": 0.9857718586764063,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_business",
+      "ks": 0.024,
+      "p_valor": 0.9823576718076036,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_george",
+      "ks": 0.024,
+      "p_valor": 0.9845397599149465,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_original",
+      "ks": 0.024,
+      "p_valor": 0.9870942022589158,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_table",
+      "ks": 0.023,
+      "p_valor": 0.9905296533325479,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_all",
+      "ks": 0.022,
+      "p_valor": 0.9936588322301304,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_make",
+      "ks": 0.022,
+      "p_valor": 0.9959889069958141,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_lab",
+      "ks": 0.022,
+      "p_valor": 0.9948540020578812,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_meeting",
+      "ks": 0.02,
+      "p_valor": 0.9989183038247238,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_receive",
+      "ks": 0.02,
+      "p_valor": 0.998815308978196,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_report",
+      "ks": 0.02,
+      "p_valor": 0.9983783065383012,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_85",
+      "ks": 0.019,
+      "p_valor": 0.9996293669285615,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_addresses",
+      "ks": 0.019,
+      "p_valor": 0.9993924277560221,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_data",
+      "ks": 0.018,
+      "p_valor": 0.9998487857481866,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_remove",
+      "ks": 0.018,
+      "p_valor": 0.9998725380987463,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_project",
+      "ks": 0.018,
+      "p_valor": 0.9997885612728084,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_hp",
+      "ks": 0.017,
+      "p_valor": 0.9999628487716947,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_credit",
+      "ks": 0.017,
+      "p_valor": 0.9998987524629432,
+      "drift": false
+    },
+    {
+      "atributo": "char_freq_bracket",
+      "ks": 0.017,
+      "p_valor": 0.9999417385382625,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_technology",
+      "ks": 0.017,
+      "p_valor": 0.9999179749211308,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_pm",
+      "ks": 0.016,
+      "p_valor": 0.9999802041139843,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_email",
+      "ks": 0.015,
+      "p_valor": 0.99999311039663,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_conference",
+      "ks": 0.015,
+      "p_valor": 0.9999979019325268,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_415",
+      "ks": 0.015,
+      "p_valor": 0.9999977247032488,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_people",
+      "ks": 0.014,
+      "p_valor": 0.9999995067294033,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_hpl",
+      "ks": 0.013,
+      "p_valor": 0.9999999897272577,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_cs",
+      "ks": 0.013,
+      "p_valor": 0.9999999909083035,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_telnet",
+      "ks": 0.013,
+      "p_valor": 0.9999999691917836,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_direct",
+      "ks": 0.013,
+      "p_valor": 0.9999999921332976,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_labs",
+      "ks": 0.012,
+      "p_valor": 0.9999999997738099,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_857",
+      "ks": 0.01,
+      "p_valor": 0.9999999999991638,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_font",
+      "ks": 0.01,
+      "p_valor": 0.9999999999992845,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_3d",
+      "ks": 0.007,
+      "p_valor": 1.0,
+      "drift": false
+    },
+    {
+      "atributo": "word_freq_parts",
+      "ks": 0.006,
+      "p_valor": 1.0,
+      "drift": false
+    }
+  ]
+}

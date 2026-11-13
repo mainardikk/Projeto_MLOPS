@@ -1,0 +1,11 @@
+{
+  "01-base-original.zip": "ae2d3cdb7d526dcc9ef15632cb3a032d6e64c635b0da7738cc55c8f1c46c2936",
+  "02-dados.patch": "dd16df82bce65a0660bd461b265271b9a52aae7f4f8043fb3e6fe5de3ac96486",
+  "03-adaptacao-spam.patch": "903f4d36cafbc0ce35f6e2612656f1237e1bd8ca03e5b6a2cbb1755cf7bea640",
+  "04-pipelines-drift.patch": "9c22227cc0111ed30414cdb147a163ead5fceb1dde2e1f66f33594a242b1016d",
+  "05-falha-controlada.patch": "0ca4a1151bf415bd39d591892449674ec7b2bdfb9529e863158ac8d2966ffd43",
+  "06-documentacao.patch": "139ae593f29fce509681b007757fbe8758fb207728a3e8f696695b02548690cc",
+  "gerar_relatorio.py": "f49216ca06359f3a2b771fa738ea342397c0048a52bc464daca19344f6d72f5b",
+  "LEIA-ME.md": "b9f62ae67773af8ea060ba2783640f8c0eb3d9948f338285e6fc86926d644627",
+  "VERIFICACAO.json": "0631dc2afae5523d74aa4ae827b9731551f2c560ed0b2e99987e803309c4100e"
+}

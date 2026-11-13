@@ -1,0 +1,188 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><base href="https://github.com/mainardikk/Projeto_MLOPS/blob/main/"><title>Relatorio de adaptacao - Spambase</title><style>@page { size: A4; margin: 12mm 13mm; }
+body { font: 10pt/1.22 Arial, sans-serif; color: #18212b; margin: 0; }
+h1 { font-size: 16pt; line-height: 1.15; margin: 0 0 4mm; }
+h2 { font-size: 11.3pt; margin: 3.3mm 0 1.6mm; break-after: avoid; }
+p { margin: 1.5mm 0; }
+table { width: 100%; border-collapse: collapse; font-size: 8.7pt; margin: 2mm 0; }
+th,td { text-align: left; vertical-align: top; padding: 1.1mm 1.5mm; border: 0.2mm solid #ccd2d8; }
+th { background: #edf2f7; }
+tr { break-inside: avoid; }
+a { color: #075895; text-decoration: none; }
+code { font-family: Consolas, monospace; font-size: 8.4pt; overflow-wrap: anywhere; }
+.quebra-pagina { break-before: page; }
+</style></head><body><h1>Adaptação de CI/CD/CT — Spambase</h1>
+<h2>1. Problema e dados</h2>
+<p>O grupo adaptou o projeto para um filtro acadêmico que encaminha mensagens suspeitas para
+spam a partir de atributos numéricos, para usuários/equipes de email.
+Fonte: <a href="https://archive.ics.uci.edu/dataset/94/spambase">UCI Spambase</a>,
+Hopkins, Reeber, Forman e Suermondt (1999), DOI <a href="https://doi.org/10.24432/C53G6X">10.24432/C53G6X</a>,
+licença <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Não incluímos textos ou endereços
+dos emails. São 4.601 registros e 57 atributos numéricos; após excluir seis linhas conflitantes
+e 391 repetições, restam 4.204. Divisão estratificada, semente 42: treino 2.522, holdout 841,
+reserva 841, sem sobreposição. O lote de CT usa 400 linhas da reserva, com origem registrada.</p>
+<h2>2. Contrato e resultado</h2>
+<p>Classe positiva: <strong>spam (<code>1</code>)</strong>. O falso positivo é mais caro: oculta uma comunicação legítima.
+Exigimos <strong>precisão &gt;= 0,93</strong>, métrica principal, e <strong>recall &gt;= 0,85</strong>, evitando detectar apenas
+poucos spams. O candidato não pode perder precisão para o campeão no mesmo conjunto.
+O campeão inicial atingiu precisão <strong>94,70%</strong> e recall <strong>85,12%</strong> no holdout; houve 16 falsos
+positivos e 50 falsos negativos. Modelo: log1p, StandardScaler e regressão logística.</p>
+<h2>3. Alterações por arquivo, seguindo a Parte C</h2>
+<p>Módulos abaixo pertencem a <code>src/mlops_demo/</code>; o nome do pacote foi preservado.</p>
+<table>
+<thead>
+<tr>
+<th>Etapa</th>
+<th>Arquivos e adaptação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>data/raw/base_treino.csv</code>, <code>base_holdout.csv</code>: novas bases; <code>lotes/</code>: lote e proveniência JSON.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>spambase.py</code>, <code>data.py</code>: obtenção com SHA-256, limpeza e divisão reproduzível; remoção do dataset antigo.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>config.py</code>: 57 atributos, alvo spam, classe 1, colunas de drift e novos limiares.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>spambase.py</code>, <code>data.py</code>: esquema, tipos, finitude, percentuais, contagens e ausência de vazamento.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>features.py</code>, <code>train.py</code>, <code>params.yaml</code>: log1p, escala, regressão e seleção interna em cinco folds.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>evaluate.py</code>: precisão/recall de spam e matriz de confusão com classe positiva 1.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>data.py</code>, <code>monitor.py</code>: seis frequências simuladas; KS com p &lt; 0,01; gatilho de quatro atributos.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>api.py</code>, <code>demo/smoke_test.py</code>: 57 entradas, esquema público, respostas spam/legítimo e HTTP 422.</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>tests/</code>: quatro camadas adaptadas, novos testes específicos em cada camada; 75 testes na main.</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>demo/cenarios.py</code>: cinco cenários; ensaios em cópias temporárias em <code>test_cenarios.py</code>.</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>models/champion/</code>: campeão inicial, métricas, validação e hashes; promoção condicionada ao portão.</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>README.md</code>, este relatório e <code>docs/</code>: domínio, execução, evidências, limites e uso de IA.</td>
+</tr>
+</tbody>
+</table>
+<p>Infraestrutura: <code>gate.py</code> vincula a aprovação aos hashes e confirma preservação do campeão;
+<code>dvc.yaml</code>/<code>dvc.lock</code> registram treino; <code>constraints.txt</code> fixa dependências diretas; <code>Dockerfile</code>
+e os três workflows validam, retreinam e publicam a mesma imagem testada. Promoção exige
+habilitação explícita e permaneceu desativada para respeitar o orçamento de seis commits.</p>
+<div class="quebra-pagina"></div>
+<h2>4. Evidências verificadas</h2>
+<table>
+<thead>
+<tr>
+<th>Evidência</th>
+<th>Execução do Actions e resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td><a href="https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43355820648">CI na main</a>: três jobs verdes, incluindo Docker.</td>
+</tr>
+<tr>
+<td>E2</td>
+<td><a href="https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43358312788">CI com falha controlada</a>: testes de modelo vermelhos em Python 3.11/3.12.</td>
+</tr>
+<tr>
+<td>E3</td>
+<td><a href="https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43355508124">CT com drift aprovado</a>: cinco atributos com drift; precisão 94,44%, recall 86,44%.</td>
+</tr>
+<tr>
+<td>E4</td>
+<td><a href="https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43358312669">CT reprovado no portão</a>: recall 100%, precisão 46,88%; campeão preservado por SHA-256.</td>
+</tr>
+<tr>
+<td>E5</td>
+<td><a href="https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43356110304">CD com tag v1.0.0</a>: CI, construção, teste, publicação e novo teste após download.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="https://github.com/mainardikk/Projeto_MLOPS/pull/1">PR do lote</a>: integrado por fast-forward.
+<a href="https://github.com/mainardikk/Projeto_MLOPS/pull/2">PR da falha</a>: fechado sem merge.
+<a href="https://github.com/mainardikk/Projeto_MLOPS/pkgs/container/projeto_mlops">Pacote público</a> e
+<a href="https://github.com/mainardikk/Projeto_MLOPS/actions/runs/43356673814">download anônimo com teste HTTP</a>
+aprovados. Imagem: <code>ghcr.io/mainardikk/projeto_mlops:1.0.0</code>. A tag aponta ao commit operacional
+<code>7041842</code>; a última entrega acrescenta documentação. O candidato aprovado ficou como artifact;
+a imagem serve o campeão inicial. O desafio de promoção automática não foi realizado.</p>
+<h2>5. Limites, riscos e monitoramento</h2>
+<p>O portão verifica métricas em uma amostra finita, não garante generalização ou ausência de
+viés. O corpus é de 1999; o drift foi calibrado artificialmente, preservando rótulos, e o KS
+não tem correção de testes múltiplos. O recall inicial ficou perto do limite. Após uma primeira
+reprovação, o critério de seleção foi revisto: o holdout já havia sido consultado e não é um
+teste final independente. O histórico está em <a href="docs/VALIDACAO.md">docs/VALIDACAO.md</a>.
+Monitoraríamos precisão, recall e falsos positivos por segmento, prevalência, qualidade dos
+dados/rótulos, drift, latência e erros da API, com avaliação externa em dados recentes.</p>
+<h2>6. Contribuições e declaração de IA</h2>
+<p>O projeto é uma entrega do grupo, organizada em seis etapas com a seguinte distribuição
+de responsabilidades:</p>
+<table>
+<thead>
+<tr>
+<th>Integrante / GitHub</th>
+<th style="text-align:right">Commit / entrega</th>
+<th>Responsabilidade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thales Serschon (<code>thalescr77</code>)</td>
+<td style="text-align:right">1</td>
+<td>Ambiente, importação do projeto e CI inicial.</td>
+</tr>
+<tr>
+<td>Bruno Mainardi (<code>mainardikk</code>)</td>
+<td style="text-align:right">2</td>
+<td>Fonte/licença, limpeza e divisão reproduzível dos dados.</td>
+</tr>
+<tr>
+<td>Jhonatan Margraf (<code>Jhonatan-Margraf</code>)</td>
+<td style="text-align:right">3</td>
+<td>Contrato, modelo, métricas, API e campeão inicial.</td>
+</tr>
+<tr>
+<td>Davi Specia (<code>davispecia</code>)</td>
+<td style="text-align:right">4</td>
+<td>Testes, drift, cenários, pipelines e publicação Docker.</td>
+</tr>
+<tr>
+<td>Kaique Geska (<code>kaiquegeska</code>)</td>
+<td style="text-align:right">5</td>
+<td>Falha controlada, E2/E4 e preservação do campeão.</td>
+</tr>
+<tr>
+<td>Victor Ibarrola (<code>VictorOliveiraIbarrola</code>)</td>
+<td style="text-align:right">6</td>
+<td>Relatório, README, evidências e conferência da entrega.</td>
+</tr>
+</tbody>
+</table>
+<p>A divisão por etapa organiza as responsabilidades dentro do trabalho coletivo do grupo.</p>
+<p><strong>Uso de IA:</strong> o grupo utilizou OpenAI Codex no planejamento, scripts de dados, código de
+ML/API, testes, workflows, diagnóstico, documentação e operações Git/GitHub. As evidências
+foram verificadas por comandos e execuções reais do Actions.</p>
+</body></html>
