@@ -1,0 +1,37 @@
+{
+  "repositorio_destino": "https://github.com/thalescr77/Projeto_MLOPS",
+  "metodo": "Aplicacao com git apply --index e comparacao das seis arvores; sem commits ou push.",
+  "validacao_de_execucoes_ci_ct": "A realizar por cada integrante e no novo GitHub Actions.",
+  "etapas": [
+    {
+      "etapa": 1,
+      "arvore": "a1017510806056691998ca20c7f29b28255b329c",
+      "igual_a_base": true
+    },
+    {
+      "etapa": 2,
+      "arvore": "ea604ce7edcdd4709c7c919aa2c0845b02cdae87",
+      "igual_a_base": true
+    },
+    {
+      "etapa": 3,
+      "arvore": "2fc97c4f0a03257cff2e7ed152ed5f9a0948301d",
+      "igual_a_base": true
+    },
+    {
+      "etapa": 4,
+      "arvore": "2a552ebbf63614a43359bc15f29f3eeeae31933f",
+      "igual_a_base": true
+    },
+    {
+      "etapa": 5,
+      "arvore": "5058d7426ca216a088effb4bad963b0ce68b252e",
+      "igual_a_base": true
+    },
+    {
+      "etapa": 6,
+      "arvore": "103befce378d6595a6fa4b11c10fafc0497a6262",
+      "igual_a_base": true
+    }
+  ]
+}
